@@ -6,12 +6,12 @@ export async function mountSummary(panel, video) {
   const fingerprint = summaryFingerprint(video.notes);
   const key = `video-summary:${video.videoId}`;
   panel.innerHTML = `
-    <div class="summary-heading"><strong>${t('Your notes, together')}</strong><div class="note-actions"><button class="action-btn" data-mode>${t('Edit text')}</button><button class="action-btn" data-close>${t('Close')}</button></div></div>
+    <div class="summary-heading"><strong>${window.Kairos.I18n.locale.startsWith('zh')?'文字总结':'Note summary'}</strong><div class="note-actions"><button class="action-btn" data-mode>${t('Edit text')}</button><button class="action-btn" data-close>${t('Close')}</button></div></div>
     <p class="summary-hint">${t('Summarizes saved text and transcript context using your AI provider. Screenshots are not sent. Review and edit before sharing.')}</p>
     <textarea class="summary-editor" aria-label="${t('Editable summary')}" placeholder="${t('Generating summary…')}"></textarea>
     <div class="summary-reading" hidden></div>
     <p class="summary-status" role="status"></p>
-    <div class="note-actions"><button class="action-btn primary" data-image>${t('Create share image')}</button><button class="action-btn" data-share>${t('Copy to share')}</button><button class="action-btn" data-download>${t('Download summary')}</button><button class="action-btn" data-generate>${t('Regenerate')}</button></div>
+    <div class="note-actions"><button class="action-btn primary" data-image>${t('Create share image')}</button><button class="action-btn" data-share>${t('Copy to share')}</button><button class="action-btn" data-download>${window.Kairos.I18n.locale.startsWith('zh')?'导出总结 Markdown':'Export summary Markdown'}</button><button class="action-btn" data-generate>${t('Regenerate')}</button></div>
     <p class="summary-hint">${t('A clean 1080px-wide PNG, ready to preview and save. Images are created locally from your edited text.')}</p>`;
   const editor = panel.querySelector('textarea');
   const status = panel.querySelector('[role=status]');

@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { generateAI } from './ai-client.js';
 import { AI_SETTINGS_KEYS, resolveAI } from './ai-providers.js';
 import { summaryPrompt, summaryFingerprint } from './note-summary.js';
+import { pagePrompt, parseGeneratedPage } from './share-page.js';
 
 /**
  * Background Service Worker
@@ -200,6 +201,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       let response;
       switch (message.type) {
+        case 'GENERATE_SHARE_PAGE':
+          if (sender.tab) throw new Error('Open the dashboard to create a share page');
+          response = await generateSharePage(message.payload);
+          break;
         case 'SUMMARIZE_VIDEO_NOTES':
           response = await summarizeVideoNotes(message.payload);
           break;
@@ -440,4 +445,15 @@ async function summarizeVideoNotes({ videoId, language } = {}) {
   const prompt = summaryPrompt(notes[0].videoTitle || '', notes, settings.noteLanguage && settings.noteLanguage !== 'auto' ? settings.noteLanguage : language);
   const text = await generateAI(settings, { prompt });
   return { text: text.trim(), fingerprint: summaryFingerprint(notes) };
+}
+
+async function generateSharePage({videoId, ids, language, intent, draft} = {}) {
+  if (typeof videoId !== 'string' || !Array.isArray(ids) || !ids.length || ids.length > 100) throw new Error('Select 1–100 notes');
+  const all = await getNotes(videoId);
+  const notes = all.filter(n => ids.includes(String(n.id))).sort((a,b)=>a.timestamp-b.timestamp);
+  if (notes.length !== new Set(ids).size) throw new Error('Notes changed. Reopen this video and try again.');
+  const settings = await chrome.storage.sync.get(AI_SETTINGS_KEYS);
+  const prompt = pagePrompt(notes[0].videoTitle || '', notes, language, intent, draft);
+  const text = await generateAI(settings, {prompt});
+  return parseGeneratedPage(text, notes, notes[0].videoUrl);
 }

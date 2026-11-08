@@ -1,0 +1,84 @@
+.share-studio{--studio-bg:rgba(238,244,248,.96);--studio-panel:rgba(255,255,255,.48);--studio-text:#263e50;--studio-muted:#6c8190;--studio-line:rgba(107,139,159,.2);--studio-accent:#4e829a;--studio-fill:rgba(95,142,165,.1);width:min(1420px,96vw);height:min(920px,94dvh);max-width:none;max-height:96dvh;padding:0;border:1px solid rgba(172,196,210,.65);border-radius:28px;background:var(--studio-bg);color:var(--studio-text);box-shadow:0 32px 120px #0005,inset 0 1px #fff9;backdrop-filter:blur(32px) saturate(1.2);overflow:hidden;animation:studio-enter .25s ease-out;color-scheme:light}
+.share-studio::backdrop{background:#0a172057;backdrop-filter:blur(9px)}
+.share-studio .page-builder,.share-studio .page-builder *{box-sizing:border-box}
+.share-studio .page-builder{height:100%;display:flex;flex-direction:column;font:14px/1.6 system-ui,sans-serif;color:var(--studio-text)}
+.share-studio [hidden]{display:none!important}
+.share-studio button,.share-studio input,.share-studio textarea,.share-studio select{font:inherit;color:inherit}
+.share-studio button{display:inline-flex;justify-content:center;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--studio-line);background:var(--studio-panel);border-radius:12px;cursor:pointer;transition:background .16s,box-shadow .16s,transform .16s;white-space:nowrap}
+.share-studio button:hover{background:var(--studio-fill);box-shadow:inset 0 0 0 1px var(--studio-line)}
+.share-studio button:active{transform:scale(.97)}
+.share-studio button:disabled{opacity:.4;cursor:default;transform:none}
+.share-studio :focus-visible{outline:2px solid var(--studio-accent);outline-offset:3px}
+.share-studio svg{width:19px;height:19px;flex-shrink:0}
+.share-studio .studio-header{min-height:84px;padding:18px 25px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--studio-line);gap:16px}
+.share-studio .studio-brand{display:flex;gap:13px;align-items:center;min-width:0}
+.share-studio .studio-brand img{width:42px;height:42px;filter:drop-shadow(0 2px 7px #94c9dd55)}
+.share-studio .studio-brand strong{font-size:19px;font-weight:600;letter-spacing:.01em}
+.share-studio .studio-brand strong span{font-size:14px;color:var(--studio-muted);font-weight:400;margin-left:9px}
+.share-studio .studio-brand small{display:block;font-size:11px;color:var(--studio-muted);margin-top:2px}
+.share-studio .studio-actions{display:flex;align-items:center;gap:9px}
+.share-studio .studio-icon{position:relative;padding:9px;border-color:transparent;background:transparent;border-radius:11px}
+.share-studio [data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 9px);right:0;background:#243846;color:#f5f9fb;border:1px solid #a5bac144;border-radius:9px;box-shadow:0 6px 18px #0002;padding:6px 10px;font-size:12px;opacity:0;pointer-events:none;transform:translateY(-3px);transition:opacity .1s,transform .1s;z-index:8}
+.share-studio [data-tip]:hover::after,.share-studio [data-tip]:focus-visible::after{opacity:1;transform:translateY(0)}
+.share-studio .studio-primary{background:var(--studio-accent);color:white;border-color:transparent;box-shadow:0 3px 9px #345e751b}
+.share-studio .studio-primary:hover{background:#426e84;color:white}
+.share-studio .studio-body{display:grid;grid-template-columns:320px minmax(0,1fr);flex:1;min-height:0}
+.share-studio .studio-sidebar{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--studio-line)}
+.share-studio .studio-tabs{display:flex;padding:16px 20px 0;gap:5px}
+.share-studio .studio-tabs button{flex:1;padding:8px 7px;background:none;border-color:transparent;color:var(--studio-muted);font-size:12px}
+.share-studio .studio-tabs button[aria-pressed=true]{background:var(--studio-panel);border-color:var(--studio-line);color:var(--studio-text);box-shadow:0 2px 6px #1a344409}
+.share-studio .studio-tabs svg{width:16px;height:16px}
+.share-studio [data-count]{font-size:10px;opacity:.8}
+.share-studio .studio-scroll{padding:26px 24px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--studio-line) transparent;flex:1}
+.share-studio .studio-eyebrow{font-size:10px;letter-spacing:.14em;color:var(--studio-accent);margin-bottom:14px}
+.share-studio h2{font-size:30px;line-height:1.45;font-weight:550;letter-spacing:-.04em;margin:0 0 14px}
+.share-studio h3{font-size:18px;margin:0 0 8px;font-weight:550}
+.share-studio p{margin:0 0 18px}
+.share-studio .studio-muted{color:var(--studio-muted);font-size:12px;line-height:1.8}
+.share-studio .intent-label{display:block;font-size:12px;margin:24px 0 10px;color:var(--studio-text)}
+.share-studio input:not([type=checkbox]),.share-studio textarea{display:block;width:100%;border:1px solid var(--studio-line);border-radius:12px;background:var(--studio-panel);padding:12px;outline:none;transition:border-color .16s,box-shadow .16s;box-shadow:inset 0 1px 2px #18344803}
+.share-studio input::placeholder,.share-studio textarea::placeholder{color:var(--studio-muted);opacity:.7}
+.share-studio textarea:focus,.share-studio input:focus{border-color:var(--studio-accent);box-shadow:0 0 0 3px var(--studio-fill)}
+.share-studio textarea{min-height:110px;resize:vertical;line-height:1.75;font-size:13px}
+.share-studio .studio-presets{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 22px}
+.share-studio .studio-presets button{border-radius:20px;padding:5px 9px;font-size:11px;background:transparent;color:var(--studio-muted)}
+.share-studio .studio-presets .chosen{border-color:var(--studio-accent);color:var(--studio-accent);background:var(--studio-fill)}
+.share-studio .studio-generate{width:100%;padding:12px;font-size:13px}
+.share-studio .studio-generate svg:last-child{margin-left:auto;width:16px}
+.share-studio .studio-footnote{color:var(--studio-muted);font-size:10px;line-height:1.8;margin-top:10px}
+.share-studio .studio-divider{height:1px;background:var(--studio-line);margin:25px 0}
+.share-studio .studio-themes{display:flex;gap:8px}
+.share-studio .studio-themes button{flex:1;flex-direction:column;font-size:11px;gap:7px;padding:8px 5px;background:transparent;border-color:transparent}
+.share-studio .studio-themes button[aria-pressed=true]{border-color:var(--studio-accent);background:var(--studio-panel)}
+.share-studio .swatch{display:block;width:100%;height:32px;border-radius:6px;border:1px solid #80908033;position:relative;background:#faf7f0}
+.share-studio .swatch::after{content:'';position:absolute;left:9px;top:10px;width:28px;height:2px;background:#61756955;box-shadow:0 5px #61756933}
+.share-studio .swatch.midnight{background:#151e27}.share-studio .swatch.sage{background:#edf1e9}
+.share-studio .studio-privacy{margin-top:26px;font-size:10px;color:var(--studio-muted)}
+.share-studio summary{cursor:pointer}.share-studio .studio-privacy p{margin-top:8px}
+.share-studio .studio-canvas{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--studio-fill);padding:0 25px 24px;position:relative}
+.share-studio .studio-preview-bar{height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;font-size:11px;color:var(--studio-muted)}
+.share-studio .studio-preview-bar>span{display:flex;gap:8px;align-items:center}.share-studio .studio-preview-bar i{width:5px;height:5px;border-radius:50%;background:var(--studio-accent)}
+.share-studio .studio-devices{display:flex;gap:4px}.share-studio .studio-devices button[aria-pressed=true]{background:var(--studio-panel);color:var(--studio-text)}
+.share-studio .studio-preview-wrap{flex:1;min-height:0;position:relative;width:100%;max-width:100%;margin:0 auto;transition:max-width .3s cubic-bezier(.2,.8,.2,1)}
+.share-studio .studio-preview-wrap.phone{max-width:390px}
+.share-studio iframe{width:100%;height:100%;display:block;border:1px solid var(--studio-line);border-radius:16px;background:#faf7f0;box-shadow:0 8px 30px #1834480b}
+.share-studio .studio-generating{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:16px;background:var(--studio-bg);backdrop-filter:blur(12px);text-align:center;padding:25px;animation:studio-enter .2s}
+.share-studio .studio-generating strong{font-size:17px;font-weight:500}.share-studio .studio-generating span{font-size:11px;color:var(--studio-muted)}
+.share-studio .studio-orbit{width:68px;height:68px;border:1px solid var(--studio-line);box-shadow:0 0 35px var(--studio-fill),inset 0 0 20px var(--studio-fill);border-radius:24px;display:grid;place-items:center;animation:studio-breathe 2s ease-in-out infinite}.share-studio .studio-orbit svg{width:28px;height:28px;color:var(--studio-accent)}
+.share-studio .studio-generating button{margin-top:15px;font-size:11px;border-color:transparent;background:transparent;color:var(--studio-muted)}
+.share-studio .studio-footer{min-height:42px;padding:9px 25px;border-top:1px solid var(--studio-line);display:flex;align-items:center;gap:9px;font-size:11px;color:var(--studio-muted)}
+.share-studio .studio-footer p{margin:0;flex:1;overflow-wrap:anywhere}.share-studio .studio-status-dot{width:5px;height:5px;background:#83a79c;border-radius:50%;flex-shrink:0}.share-studio .studio-local{font-size:10px;white-space:nowrap;opacity:.7}.share-studio [data-undo]{padding:3px 7px;font-size:10px;background:transparent;border-color:transparent}
+.share-studio .studio-panel-title{display:flex;align-items:center;justify-content:space-between}.share-studio .studio-panel-title button{font-size:11px;background:transparent;padding:4px 7px}
+.share-studio .sources label{display:flex;align-items:flex-start;gap:10px;padding:14px 0;border-bottom:1px solid var(--studio-line);cursor:pointer;font-size:12px}
+.share-studio .sources small{display:block;color:var(--studio-accent);font-variant-numeric:tabular-nums;font-size:11px;margin-bottom:4px}
+.share-studio .sources label>span>span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.share-studio .sources input{appearance:none;width:15px;height:15px;flex-shrink:0;border:1px solid var(--studio-line);border-radius:5px;margin:4px 0;background:var(--studio-panel);position:relative;cursor:pointer}
+.share-studio .sources input:checked{background:var(--studio-accent);border-color:var(--studio-accent)}.share-studio .sources input:checked::after{content:'✓';font-size:11px;color:white;position:absolute;inset:-2px 2px}
+.share-studio .fields label{display:block;margin:18px 0;color:var(--studio-muted);font-size:11px}.share-studio .fields input,.share-studio .fields textarea{margin-top:7px;color:var(--studio-text);font-size:13px}
+.share-studio .publication input{margin:8px 0}.share-studio .publication button{font-size:12px;margin-bottom:8px}.share-studio [data-auth]{font-size:12px;margin:24px 0}.share-studio .studio-code{display:flex;gap:7px;align-items:center}.share-studio [data-publish]{width:100%}.share-studio [data-link]{overflow-wrap:anywhere;font-size:12px}.share-studio .published-item{padding:12px 0;border-bottom:1px solid var(--studio-line);font-size:12px}.share-studio .published-item button{margin-top:8px}.share-studio a{color:var(--studio-accent)}
+@media(prefers-color-scheme:dark){.share-studio{--studio-bg:rgba(25,37,48,.97);--studio-panel:rgba(177,204,222,.055);--studio-text:#dfebf2;--studio-muted:#8cabbc;--studio-line:rgba(145,181,205,.16);--studio-accent:#6294aa;--studio-fill:rgba(110,153,179,.065);color-scheme:dark;border-color:#a3c4db36;box-shadow:0 32px 120px #0008,inset 0 1px #b4d1e522}}
+@media(max-width:850px){.share-studio{width:98vw;height:96dvh;border-radius:20px}.share-studio .studio-body{grid-template-columns:270px minmax(0,1fr)}.share-studio .studio-scroll{padding:20px 16px}.share-studio .studio-canvas{padding:0 12px 12px}.share-studio .studio-brand strong span{display:none}.share-studio .studio-header{padding:14px 18px}.share-studio .studio-local{display:none}}
+@media(max-width:600px){.share-studio .studio-body{display:flex;flex-direction:column;overflow:auto}.share-studio .studio-sidebar{flex:none;border-right:0}.share-studio .studio-scroll{max-height:340px}.share-studio .studio-canvas{min-height:500px;flex:none}.share-studio .studio-preview-wrap{height:460px;flex:none}.share-studio .studio-export span{display:none}.share-studio .studio-brand small{display:none}.share-studio .studio-brand img{width:32px;height:32px}.share-studio .studio-actions{gap:4px}.share-studio .studio-header{gap:8px;padding:12px}.share-studio .studio-footer{padding:8px 12px}.share-studio h2 br{display:none}.share-studio h2{font-size:24px}}
+@keyframes studio-enter{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes studio-breathe{50%{transform:scale(1.08);box-shadow:0 0 45px #87bdd822}}
+@media(prefers-reduced-motion:reduce){.share-studio,.share-studio *{animation:none!important;transition:none!important}}

@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {connectShareService} from '../src/share-service.js';
+let store={}, calls=[], fail=false;
+globalThis.chrome={storage:{session:{get:async key=>({[key]:store[key]}),set:async value=>Object.assign(store,value),remove:async key=>delete store[key]}}};
+globalThis.fetch=async(url,options={})=>{
+  calls.push({url,options});
+  if(url.endsWith('share-config.json'))return {ok:true,json:async()=>({url:'https://test-project.supabase.co',key:'sb_publishable_test'})};
+  if(fail)return {ok:false,status:401,json:async()=>({message:'expired'})};
+  if(url.endsWith('/verify'))return {ok:true,json:async()=>({access_token:'SESSION_ONLY',expires_in:3600})};
+  return {ok:true,json:async()=>url.endsWith('list_my_shares')?[]:'ok'};
+};
+const api=await connectShareService();assert.equal(api.signedIn(),false);
+await assert.rejects(api.publish('id',{}),/Sign in/);
+await api.sendCode('test@example.com');assert.ok(!calls.at(-1).options.headers.Authorization);
+await api.verify('test@example.com','123456');assert.equal(api.signedIn(),true);
+await api.publish('id',{title:'Page'});assert.equal(calls.at(-1).options.headers.Authorization,'Bearer SESSION_ONLY');
+assert.deepEqual(JSON.parse(calls.at(-1).options.body),{share_id:'id',document:{title:'Page'}});
+await api.list();await api.revoke('id');
+fail=true;await assert.rejects(api.list(),/expired/);assert.equal(api.signedIn(),false);assert.deepEqual(store,{});
+fail=false;await api.verify('test@example.com','123456');await api.signOut();assert.equal(api.signedIn(),false);
+globalThis.fetch=async()=>({ok:false});await assert.rejects(connectShareService(),/not configured/);
+console.log('PASS: unauthenticated publishing rejected, OTP, session-only token, publish/revoke requests and expired session cleanup');

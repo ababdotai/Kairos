@@ -69,7 +69,8 @@ Model references: [Gemini](https://ai.google.dev/gemini-api/docs/models), [OpenA
 
 ## Current companion experience
 
-- **Summarize & share** in the note dashboard turns a video’s saved text notes and transcript context into an editable AI summary with timestamps. Copy it with its source link or download Markdown. Summaries stay in local extension storage; screenshot images are not sent for this operation. Preview and download a locally rendered PNG share image with the video title, takeaways, source and Kairos branding. Images are 1080px wide and grow with the edited text.
+- **Share webpage** in the dashboard generates an editable page from selected text notes, with source references, four section layouts and three visual themes. Preview/download HTML locally. Optional email-authenticated publishing and revocation require a configured Supabase project; see [deployment setup](doc/share-pages-setup.md). No public hosting is enabled by default.
+- **Text summary** in the note dashboard turns a video’s saved text notes and transcript context into an editable AI summary with timestamps. Copy it with its source link or download Markdown. Summaries stay in local extension storage; screenshot images are not sent for this operation. Preview and download a locally rendered PNG share image with the video title, takeaways, source and Kairos branding. Images are 1080px wide and grow with the edited text.
 - Enable Kairos in the video’s glass island, then type to take a note or left-drag to capture a rectangular region. Player controls remain accessible. Empty captures are discarded; successfully saving a note resumes playback.
 - Hover over the island to expand it, or use **Expand** to keep it open. Drag to reposition it and resize from its edges; position and size preferences carry across videos. Notes are available in the island and in the windowed sidebar.
 - The timeline uses a triangular playhead and small glowing note markers. Dense markers form a subtle wave; clicking still seeks to the note’s exact timestamp.
@@ -181,3 +182,5 @@ MIT License
 ---
 
 **Built with ❤️ by an indie maker who believes in the power of capturing the right moment.**
+
+Dashboard actions are shown directly with hover help. Switch between vertical and horizontal zigzag timelines; the layout preference is saved locally. Export notes preserves the original records, while the summary panel exports the generated summary.

@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {parseGeneratedPage,renderPage,validatePage,pagePrompt} from '../src/share-page.js';
+const notes=[{id:'n1',timeLabel:'01:20',content:'A useful idea',context:'PRIVATE_TRANSCRIPT',imageUrl:'PRIVATE_IMAGE',originalContent:'rough idea',aiContent:'A useful idea'}];
+const model={theme:'paper',title:'<script>alert(1)</script>',subtitle:'A page',sections:[{kind:'cards',title:'Ideas',items:[{title:'An idea',text:'<img src=x onerror=alert(1)>',refs:['n1']}]}]};
+const page=parseGeneratedPage(JSON.stringify(model),notes,'https://www.youtube.com/watch?v=abc');
+assert.ok(page.sources[0].text.includes('rough idea'));
+const html=renderPage(page);
+assert.ok(!html.includes('<script>'));assert.ok(!html.includes('<img src=x'));
+assert.ok(!html.includes('PRIVATE_TRANSCRIPT'));assert.ok(!html.includes('PRIVATE_IMAGE'));
+assert.ok(html.includes('href="#source-0"'));
+assert.throws(()=>validatePage({...page,url:'javascript:alert(1)'}));
+assert.throws(()=>validatePage({...page,sections:[{...page.sections[0],items:[{...page.sections[0].items[0],refs:['fake']}]}]}));
+assert.throws(()=>validatePage({...page,sections:[{...page.sections[0],items:[{...page.sections[0].items[0],refs:[]}]}]}));
+assert.throws(()=>validatePage({...page,title:'a'.repeat(181)}));
+assert.throws(()=>parseGeneratedPage('not JSON',notes,''));
+assert.ok(pagePrompt('Title',notes,'zh-CN','intent').includes('PRIVATE_TRANSCRIPT'));
+assert.ok(!pagePrompt('Title',notes,'en','intent').includes('PRIVATE_IMAGE'));
+console.log('PASS: webpage schema, source allowlist, script escaping, URL checks and private context exclusion');
+
+assert.ok(pagePrompt('Title',notes,'en','Make it shorter',page).includes('Current draft'));
+assert.ok(pagePrompt('Title',notes,'en','Make it shorter',page).includes('An idea'));
+assert.ok(!pagePrompt('Title',[{id:'other',content:'A different note'}],'en','',page).includes('An idea'));
+console.log('PASS: iteration uses the current draft only when its sources are still selected');
