@@ -9,6 +9,10 @@
 <h1 align="center">Kairos</h1>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/kairos-your-ai-video-note/idhcehbbnfdklhbondmbpplpcdbnodfp?utm_source=ext_extensions_menu"><strong>从 Chrome 网上应用店安装</strong></a>
+</p>
+
+<p align="center">
   <em><strong>Kairos = 关键时刻。</strong></em><br/>
   <strong>一起看，随手记</strong><br/>
   <sub>将线性视频转化为可查询的知识库。</sub>

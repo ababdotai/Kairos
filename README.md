@@ -9,6 +9,10 @@
 <h1 align="center">Kairos</h1>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/kairos-your-ai-video-note/idhcehbbnfdklhbondmbpplpcdbnodfp?utm_source=ext_extensions_menu"><strong>Install from Chrome Web Store</strong></a>
+</p>
+
+<p align="center">
   <em><strong>Kairos = Vital Moments.</strong></em><br/>
   <strong>Watch together. Remember more.</strong><br/>
   <sub>Transform linear videos into queryable knowledge bases.</sub>
