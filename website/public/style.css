@@ -52,3 +52,10 @@ body{padding-top:86px}
 .product-capture img{display:block;width:100%;height:auto}
 .product-capture figcaption{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
 @media(max-width:600px){.product-capture{padding:20px 0 40px}.product-capture-heading{margin-bottom:20px}.product-capture figure a{border-radius:10px}}
+
+/* Brand-colour platform marks stay readable in either theme and wrap on mobile. */
+.hero .compatibility{display:flex;flex-wrap:wrap;gap:14px 24px;max-width:640px;margin:26px auto 0;font-size:13px;color:var(--muted)}
+.supported-platform{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.supported-platform img{width:24px;height:24px;flex:none}
+.hero .platform-note{margin:12px auto 0;font-size:11px;line-height:1.6;color:var(--muted)}
+@media(max-width:480px){.hero .compatibility{gap:14px 18px;font-size:12px}.supported-platform img{width:22px;height:22px}}

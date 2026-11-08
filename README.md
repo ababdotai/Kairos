@@ -24,12 +24,21 @@
 
 How can watching knowledge-dense videos become more valuable and interactive?
 
-Kairos is a video note-taking agent built on multimodal AI providers, currently shipped as a Chrome Extension. While you watch high-information-density videos on Coursera / Udemy / Bilibili / YouTube / TED, Kairos lets you take notes elegantly without breaking your flow. With simple, intuitive interactions combined with intelligent visual understanding and semantic analysis, every vital moment (Kairos) is captured precisely — turning your fragmented video notes into a queryable, indexable knowledge base.
+Kairos is a Chrome extension for timestamped video notes and region captures. Revisit notes as the video plays, or enable AI refinement using the current frame and available captions. Both your original text and its AI refinement are retained.
 
-Kairos is a **Proactive + Reactive** agent:
+## Platform support
 
-- **Proactive**: Kairos watches the video with you and automatically discovers highlights and key points.
-- **Reactive**: You provide the signal; the AI reduces the noise and fills in the fidelity.
+| Platform | Playback pages | Status |
+| --- | --- | --- |
+| YouTube | Watch, Shorts | Supported |
+| Bilibili | Videos, bangumi episodes | Supported |
+| Coursera | Course lectures | Experimental |
+| Udemy | Course lessons, including hash navigation | Experimental |
+| TED | Individual talks | Experimental |
+
+The new platforms pass browser fixture tests for routing, main-video selection and note-panel insertion. Authenticated course playback still needs live verification. Homepage previews do not activate Kairos. On Coursera, Udemy and TED, notes appear below the main content. Shorts and bangumi use the island as their primary entry point.
+
+Requires a video element accessible in the page. Cross-origin embedded players and DRM-protected frame capture are currently unsupported. Enabled native text tracks provide AI caption context when available. Desktop Chrome is supported.
 
 ## What's new in 1.0.5 · 2026-11-05
 

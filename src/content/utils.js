@@ -31,6 +31,19 @@
         // Preserve existing episode IDs while rejecting feeds, profiles and opus pages.
         if (/^\/bangumi\/play\/(ep|ss)\d+\/?$/.test(url.pathname)) return `bili-${url.pathname}`;
       }
+      if (url.hostname === 'www.coursera.org') {
+        const lecture = url.pathname.match(/^\/learn\/([^/]+)\/lecture\/([^/]+)(?:\/[^/]+)?\/?$/);
+        if (lecture) return `coursera-${lecture[1]}-${lecture[2]}`;
+      }
+      if (url.hostname === 'www.udemy.com') {
+        const course = url.pathname.match(/^\/course\/([^/]+)\/learn\/(?:lecture\/\d+\/?)?$/);
+        const lecture = url.pathname.match(/\/lecture\/(\d+)/) || url.hash.match(/^#\/?(?:overview\/)?lecture\/(\d+)(?:[/?]|$)/);
+        if (course && lecture) return `udemy-${course[1]}-${lecture[1]}`;
+      }
+      if (url.hostname === 'www.ted.com') {
+        const talk = url.pathname.match(/^\/talks\/([^/]+)(?:\/transcript)?\/?$/);
+        if (talk && !['browse','quick-list'].includes(talk[1])) return `ted-${talk[1]}`;
+      }
       return null;
     },
 

@@ -40,8 +40,8 @@
       const validCandidates = allVideos.filter(video => {
         const playerSelector = videoId.startsWith('yt-')
           ? '.html5-video-player'
-          : '.bpx-player-container, .bilibili-player, #bilibili-player';
-        if (!video.closest(playerSelector)) return false;
+          : videoId.startsWith('bili-') ? '.bpx-player-container, .bilibili-player, #bilibili-player' : null;
+        if (playerSelector && !video.closest(playerSelector)) return false;
         // Check 1: Is it visible? (offsetParent is null if display:none)
         if (video.offsetParent === null) return false;
         const style = getComputedStyle(video);

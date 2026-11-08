@@ -35,7 +35,17 @@
     }
 
     startObserving() {
-      if (this.platform === 'unknown') return;
+      if (this.platform === 'unknown') {
+        if (!this.pollInterval) this.pollInterval = setInterval(() => {
+          if (!global.Kairos.Utils.getVideoId()) return;
+          const video = global.Kairos.overlayManagerInstance?.videoElement;
+          const text = Array.from(video?.textTracks || [])
+            .filter(track => ['captions', 'subtitles'].includes(track.kind) && track.mode === 'showing')
+            .flatMap(track => Array.from(track.activeCues || [], cue => cue.text || '')).join(' ');
+          this._recordCaption(text, video);
+        }, 500);
+        return;
+      }
 
       const container = document.querySelector(this.containerSelector);
       if (container) {
@@ -116,11 +126,14 @@
         currentText = container.innerText;
       }
       
+      this._recordCaption(currentText, document.querySelector('video'));
+    }
+
+    _recordCaption(currentText, video) {
       currentText = currentText.trim().replace(/\s+/g, ' '); // Normalize whitespace
       if (!currentText) return;
 
       const now = Date.now();
-      const video = document.querySelector('video');
       const videoTime = video ? video.currentTime : 0;
 
       // --- Handle Buffer (Short-term) ---
@@ -169,6 +182,8 @@
      * @returns {boolean} True if subtitle button exists
      */
     isAvailable() {
+      if (this.platform === 'unknown') return Array.from(global.Kairos.overlayManagerInstance?.videoElement?.textTracks || [])
+        .some(track => ['captions', 'subtitles'].includes(track.kind));
       if (this.platform === 'youtube') {
         const btn = document.querySelector('.ytp-subtitles-button');
         // YouTube button is always there for videos that support it, but check display just in case
@@ -189,6 +204,8 @@
      * @returns {boolean} True if subtitles are turned on
      */
     isActive() {
+      if (this.platform === 'unknown') return Array.from(global.Kairos.overlayManagerInstance?.videoElement?.textTracks || [])
+        .some(track => ['captions', 'subtitles'].includes(track.kind) && track.mode === 'showing');
       if (this.platform === 'youtube') {
         const btn = document.querySelector('.ytp-subtitles-button');
         // YouTube uses aria-pressed="true" when subtitles are on

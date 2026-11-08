@@ -44,3 +44,5 @@ With the local preview server running, run `node website/scripts/check.mjs` from
 
 Reference: https://x.ai/bot
 Vercel routing documentation: https://vercel.com/docs/routing/rewrites
+
+Platform logos in `public/assets/platforms/` come from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. Brand marks belong to their respective owners. The platform row and FAQ label Coursera, Udemy and TED support as experimental pending live course verification.

@@ -3,6 +3,15 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 const source = (await readFile(new URL('../src/popup.js', import.meta.url), 'utf8')).replace(/^import .*;$/gm, '');
 const routes = [
+  ['https://www.coursera.org/learn/ml/lecture/abc/intro','coursera-ml-abc'],
+  ['https://www.coursera.org/learn/ml/home',null],
+  ['https://www.udemy.com/course/python/learn/lecture/123#overview','udemy-python-123'],
+  ['https://www.udemy.com/course/python/learn/#/lecture/124','udemy-python-124'],
+  ['https://www.udemy.com/course/python/',null],
+  ['https://www.ted.com/talks/a_talk','ted-a_talk'],
+  ['https://www.ted.com/talks/a_talk/transcript','ted-a_talk'],
+  ['https://www.ted.com/talks',null],
+  ['https://www.ted.com.evil.test/talks/a_talk',null],
   [undefined, null], ['chrome://extensions/', null], ['https://example.com/', null],
   ['https://www.youtube.com/', null], ['https://www.youtube.com/watch', null],
   ['https://www.bilibili.com/', null], ['https://youtube.com.example.com/watch?v=abc', null],
@@ -47,6 +56,7 @@ for (const scenario of cases) {
         return 'response' in scenario ? scenario.response : {success:true,data:[]};
       } } }
   };
+  vm.runInNewContext(await readFile(new URL('../src/content/utils.js', import.meta.url), 'utf8'), context);
   vm.runInNewContext(source, context);
   await init();
   assert.equal(requests[0]?.payload.videoId ?? null, expected);

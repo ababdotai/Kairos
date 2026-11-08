@@ -8,6 +8,7 @@
     '.bpx-player-control-wrap', '.bpx-player-control-bottom', '.bpx-player-progress-wrap',
     '.bpx-player-ctrl-btn', '.bpx-player-ctrl-playbackrate-menu', '.bpx-player-ctrl-quality-menu',
     '.bpx-player-ctrl-setting-box', '.bilibili-player-video-control',
+    '.vjs-control-bar', '.vjs-menu', '[data-purpose="video-controls"]',
     '.ytp-chrome-bottom', '.ytp-popup', '.ytp-settings-menu',
     '[role="menu"]', '[role="menuitem"]', '[role="menuitemradio"]', '[role="listbox"]', '[role="option"]'
   ].join(',');

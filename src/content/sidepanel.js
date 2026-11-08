@@ -157,6 +157,11 @@
         return null;
       }
 
+      if (/^(coursera|udemy|ted)-/.test(Utils.getVideoId() || '')) {
+        const main = document.querySelector('main, [role="main"]');
+        if (main) return { insertAfter: main };
+      }
+
       return null;
     }
 

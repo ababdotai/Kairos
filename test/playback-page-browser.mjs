@@ -160,6 +160,14 @@ try {
   await call('Input.dispatchKeyEvent',{type:'keyUp',key:'h'});
   assert.equal(await run('o.isEditing'),false,'Homepage typing is not captured after SPA navigation');
   assert.equal(await run('o.videoElement'),null);
+  for (const url of ['https://www.coursera.org/learn/ml/lecture/abc/intro','https://www.udemy.com/course/python/learn/lecture/123','https://www.ted.com/talks/a_talk']) {
+    await run(`pageUrl=${JSON.stringify(url)};preview.remove();video.parentElement.className='lesson-player';tick();`);
+    assert.equal(await run('tracker.videoElement===video'),true, url);
+    await run("document.body.appendChild(document.createElement('main'));side.lastInjectionTime=0;side.injectPanel()");
+    assert.equal(await run('!!document.querySelector("#kairos-sidepanel")'),true,'Lesson notes panel');
+    await run("pageUrl=new URL(pageUrl).origin+'/';tick()");
+    assert.equal(await run('tracker.videoElement'),null,'Homepage previews excluded');
+  }
   await run('tracker.stop();o.destroy();window.fresh=new Kairos.OverlayManager();');
   await run('fresh.init()');
   assert.equal(await run('getComputedStyle(fresh.container).display'),'none','Initial island stays hidden before any valid video is found');

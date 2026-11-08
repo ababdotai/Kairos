@@ -24,11 +24,21 @@
 
 如何让知识载体类视频的消费过程更有价值和互动性?
 
-Kairos 是一个基于多家 AI 提供商的多模态理解能力的视频笔记Agent，目前的载体为一个Chrome Extension，核心功能为在用户观看Coursera/Udemy/Bilibili/YouTube/TED等高信息密度视频时，在不打断心流的前提下优雅地做笔记，通过简单直观的操作+AI结合智能的视觉理解和语义分析，让每个关键时刻（Kairos）都被精准捕获，将用户的碎片化视频笔记转化为可查询、可索引的知识库。
+Kairos 是一款 Chrome 视频笔记扩展。观看时可以记录想法、框选截图，并按时间点回看。开启 AI 后，可结合画面和字幕润色笔记，保留原文与 AI 版本。
 
-Kairos 是一个Proactive+Reactive的Agent：
-- Proactive：Kairos陪用户观看视频，自动发现重点和亮点
-- Reactive：用户负责提供信号（Signal），AI 负责降低噪点（Noise）并填充细节（Fidelity）
+## 平台支持
+
+| 平台 | 播放页面 | 状态 |
+| --- | --- | --- |
+| YouTube | Watch、Shorts | 已支持 |
+| Bilibili | 视频、番剧 | 已支持 |
+| Coursera | 课程讲座页 | 实验性支持 |
+| Udemy | 课程课时页，含 hash 导航 | 实验性支持 |
+| TED | 单个演讲页 | 实验性支持 |
+
+新增平台已通过浏览器模拟页面的路由、主视频选择与笔记面板测试，登录后的真实课程仍需验证。首页预览不会触发 Kairos。Coursera、Udemy、TED 的笔记面板置于主内容下方；YouTube Shorts 和 Bilibili 番剧以灵动岛为主要入口。
+
+需要页面内可访问的视频元素。跨域嵌入播放器与 DRM 画面截图暂不覆盖；原生字幕轨道可用且已启用时，AI 可读取字幕上下文。适用于桌面 Chrome。
 
 ## 1.0.5 更新 · 2026-11-05
 

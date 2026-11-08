@@ -1,4 +1,5 @@
 import './content/i18n.js';
+import './content/utils.js';
 const { t, localize } = window.Kairos.I18n;
 document.addEventListener('DOMContentLoaded', async () => {
   await window.Kairos.I18n.init();
@@ -65,28 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let url;
   try { url = new URL(tab?.url); } catch { /* Restricted tabs may omit their URL. */ }
-  const isHost = domain => url && (url.hostname === domain || url.hostname.endsWith('.' + domain));
-  if (!isHost('youtube.com') && !isHost('bilibili.com')) {
-    showEmptyState(t("Not a Video Page"), t("Please navigate to YouTube or Bilibili to use Kairos."));
-    return;
-  }
-
-  // Get Video ID from URL (Robust Logic)
-  let videoId = null;
-  if (isHost('youtube.com')) {
-    if (url.pathname.startsWith('/shorts/')) {
-      const id = url.pathname.split('/shorts/')[1].split('/')[0];
-      videoId = id ? 'yt-' + id : null;
-    } else if (url.pathname === '/watch' && url.searchParams.get('v')) {
-      videoId = 'yt-' + url.searchParams.get('v');
-    }
-  } else if (isHost('bilibili.com')) {
-    const bvid = url.pathname.split('/').find(p => p.startsWith('BV'));
-    videoId = bvid ? 'bili-' + bvid : null;
-  }
+  const videoId = url ? window.Kairos.Utils.getVideoId(url.href) : null;
 
   if (!videoId) {
-    showEmptyState(t("No Video Found"), t("Open YouTube or Bilibili to start capturing."));
+    showEmptyState(t("No Video Found"), t("Open a supported video lesson or talk to start capturing."));
     return;
   }
 

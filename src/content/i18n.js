@@ -203,7 +203,7 @@
   "collected": "已记录",
   "Download Markdown": "下载 Markdown",
   "No Video Detected": "未检测到视频",
-  "Open YouTube or Bilibili to start capturing.": "打开 YouTube 或哔哩哔哩开始记录。",
+  "Open a supported video lesson or talk to start capturing.": "打开受支持的视频课程或演讲开始记录。",
   "Refresh Page": "刷新页面",
   "Quick Actions": "快捷操作",
   "Click Enable": "点击“启用”",

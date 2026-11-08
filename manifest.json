@@ -14,13 +14,19 @@
     "https://api.anthropic.com/*",
     "https://api.deepseek.com/*",
     "https://api.moonshot.cn/*",
-    "https://openrouter.ai/*"
+    "https://openrouter.ai/*",
+    "https://www.coursera.org/*",
+    "https://www.udemy.com/*",
+    "https://www.ted.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
         "*://www.youtube.com/*",
-        "*://www.bilibili.com/*"
+        "*://www.bilibili.com/*",
+        "https://www.coursera.org/*",
+        "https://www.udemy.com/*",
+        "https://www.ted.com/*"
       ],
       "js": [
         "src/content.js"
@@ -46,7 +52,10 @@
       ],
       "matches": [
         "*://www.youtube.com/*",
-        "*://www.bilibili.com/*"
+        "*://www.bilibili.com/*",
+        "https://www.coursera.org/*",
+        "https://www.udemy.com/*",
+        "https://www.ted.com/*"
       ]
     }
   ],
