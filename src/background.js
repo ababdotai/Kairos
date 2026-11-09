@@ -1,7 +1,9 @@
+import { normalizeNoteLocation } from './note-location.js';
+import { createNoteReplay } from './note-replay.js';
 import { prepareNoteSave, refinementPrompt } from './note-refinement.js';
 import { GoogleGenAI } from '@google/genai';
 import { generateAI } from './ai-client.js';
-import { AI_SETTINGS_KEYS, resolveAI } from './ai-providers.js';
+import { AI_SETTINGS_KEYS, resolveAI, isAIConfigurationError } from './ai-providers.js';
 import { summaryPrompt, summaryFingerprint } from './note-summary.js';
 import { pagePrompt, parseGeneratedPage } from './share-page.js';
 
@@ -11,7 +13,7 @@ import { pagePrompt, parseGeneratedPage } from './share-page.js';
  */
 
 const DB_NAME = 'KairosDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'notes';
 
 // --- IndexedDB Helpers ---
@@ -25,6 +27,14 @@ function openDB() {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('videoId', 'videoId', { unique: false });
       }
+      // Re-index legacy Bilibili notes by their saved part URL, preserving every record.
+      const cursor = request.transaction.objectStore(STORE_NAME).openCursor();
+      cursor.onsuccess = () => {
+        const item = cursor.result;
+        if (!item) return;
+        item.update(normalizeNoteLocation(item.value));
+        item.continue();
+      };
     };
     request.onsuccess = (e) => resolve(e.target.result);
     request.onerror = (e) => reject(e.target.error);
@@ -72,7 +82,7 @@ async function publishNote(note, deletedId) {
 let refinementEnabledOverride;
 async function saveNote(input) {
   const settings = await chrome.storage?.sync?.get([...AI_SETTINGS_KEYS, 'autoRefineNotes']) || {};
-  const { note } = await mutateNote(input.id, previous => prepareNoteSave(input, previous, refinementEnabledOverride ?? (settings.autoRefineNotes === true)));
+  const { note } = await mutateNote(input.id, previous => prepareNoteSave(normalizeNoteLocation(input), previous, refinementEnabledOverride ?? (settings.autoRefineNotes === true)));
   // Return the committed original immediately; refinement cannot delay playback.
   void publishNote(note);
   if (note.refinement?.status === 'pending') void refineNote(note, settings);
@@ -117,7 +127,10 @@ async function setAutoRefine(enabled) {
     // Read storage outside this guard so genuine storage errors remain visible.
     const settings = await chrome.storage.sync.get(AI_SETTINGS_KEYS);
     try { resolveAI(settings); }
-    catch { return { status: 'configuration_required' }; }
+    catch (error) {
+      if (isAIConfigurationError(error)) return { status: 'configuration_required' };
+      throw error;
+    }
   }
   const previous = refinementEnabledOverride;
   refinementEnabledOverride = enabled;
@@ -193,6 +206,11 @@ async function deleteNote(id) {
   });
 }
 
+const noteReplay = createNoteReplay(chrome, getNote);
+chrome.tabs?.onRemoved?.addListener(tabId => { void noteReplay.clear(tabId); });
+
+const aiRequestTypes = new Set(['ANALYZE_FRAME', 'ANALYZE_SUBTITLES', 'GENERATE_HUD_SCRIPT', 'SUMMARIZE_VIDEO_NOTES', 'GENERATE_SHARE_PAGE']);
+
 // --- Message Listener ---
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -200,7 +218,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     try {
       let response;
+      if (aiRequestTypes.has(message.type)) resolveAI(await chrome.storage.sync.get(AI_SETTINGS_KEYS));
       switch (message.type) {
+        case 'OPEN_NOTE':
+          if (sender.tab) throw new Error('Open notes from the dashboard');
+          response = await noteReplay.open(message.payload.id);
+          break;
+        case 'GET_NOTE_REPLAY':
+          response = await noteReplay.pending(sender);
+          break;
+        case 'FINISH_NOTE_REPLAY':
+          if ((sender.frameId ?? 0) === 0) await noteReplay.clear(sender.tab?.id);
+          response = { status: 'cleared' };
+          break;
         case 'GENERATE_SHARE_PAGE':
           if (sender.tab) throw new Error('Open the dashboard to create a share page');
           response = await generateSharePage(message.payload);
@@ -262,8 +292,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       sendResponse({ success: true, data: response });
     } catch (error) {
-      console.error('Background Error:', error);
-      sendResponse({ success: false, error: error.message });
+      // Missing configuration is actionable UI state, not an extension crash.
+      if (!isAIConfigurationError(error)) console.error('Background Error:', error);
+      sendResponse({
+        success: false, error: error.message,
+        ...(isAIConfigurationError(error) ? { code: error.code, providerName: error.providerName } : {})
+      });
     }
   })();
   return true; // Keep channel open for async response
@@ -348,6 +382,7 @@ JSON ONLY. No markdown.`;
     const text = await generateAI(settings, { prompt });
     return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));
   } catch (e) {
+    if (isAIConfigurationError(e)) throw e;
     console.error('Smart Highlight Error:', e);
     return { isKeyMoment: false };
   }
@@ -431,6 +466,7 @@ async function callGeminiForHUD(payload) {
     const result = JSON.parse(response.text);
     return Array.isArray(result) ? result : [];
   } catch (e) {
+    if (isAIConfigurationError(e)) throw e;
     console.error('HUD Script Generation Error:', e);
     return [];
   }

@@ -50,7 +50,7 @@ try {
   await run(`window.cache={};window.requests=[];window.failSummary=false;
     const canvas=document.createElement('canvas');canvas.width=480;canvas.height=320;
     const c=canvas.getContext('2d');c.fillStyle='#476c79';c.fillRect(0,0,480,320);c.fillStyle='#fff';c.font='24px sans-serif';c.fillText('Video snapshot',40,160);
-    window.notes=[{id:'one',videoId:'a',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:92,timeLabel:'01:32',content:'不要只看结果，还要看当时的信息与选择。',source:'user',imageUrl:canvas.toDataURL(),createdAt:1},{id:'two',videoId:'a',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:119,timeLabel:'01:59',content:'先记录判断依据，再回头检查。',source:'user',createdAt:1},{id:'three',videoId:'b',videoTitle:'Second video',timestamp:0,timeLabel:'00:00',content:'Other video',createdAt:0}];
+    window.notes=[{id:'one',videoId:'a',courseTitle:'Decision course',lessonTitle:'学习如何做出更好的决定',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:92,timeLabel:'01:32',content:'不要只看结果，还要看当时的信息与选择。',source:'user',imageUrl:canvas.toDataURL(),createdAt:1},{id:'two',videoId:'a',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:119,timeLabel:'01:59',content:'先记录判断依据，再回头检查。',source:'user',createdAt:1},{id:'three',videoId:'b',videoTitle:'Second video',timestamp:0,timeLabel:'00:00',content:'Other video',createdAt:0}];
     window.chrome={storage:{sync:{get:async(keys,cb)=>{const result={uiLanguage:'zh',providerModels:{openai:'gpt-5.4-nano'}};if(cb)setTimeout(()=>cb(result),0);return result;},set:async()=>{}},local:{get:async k=>({[k]:cache[k]}),set:async v=>Object.assign(cache,v)}},runtime:{sendMessage:async(msg,cb)=>{requests.push(msg);if(cb){setTimeout(()=>cb({success:true,data:notes}),0);return;}if(failSummary)return {success:false,error:'Test provider unavailable'};return {success:true,data:{text:'## 我的观看收获\\n\\n- [01:32] 判断过程和结果同样重要。\\n- [01:59] 记录依据，留待复盘。',fingerprint:summaryFingerprint(notes.filter(n=>n.videoId===msg.payload.videoId))}};}}};
     Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}});`);
   for (const file of ['src/provider-icons.js','src/ai-providers.js','src/content/i18n.js','src/content/markdown.js','src/content/refinement.js','src/note-summary.js','src/share-image.js','src/dashboard-summary.js','src/share-page.js','src/share-service.js','src/dashboard-share-page.js','src/dashboard.js','src/settings-timeline.js']) {
@@ -69,6 +69,17 @@ try {
   await run('document.dispatchEvent(new Event("DOMContentLoaded"));new Promise(r=>setTimeout(r,100))');
   await run('document.querySelector(".video-item").click()');
   assert.ok((await run('document.querySelector("#btnSummary").textContent')).includes('文字总结'));
+  assert.equal(await run('getComputedStyle(document.querySelector(".btn-copy-note")).opacity'),'1','Copy stays visible without hover');
+  assert.equal(await run('getComputedStyle(document.querySelector(".note-action")).opacity'),'1','Revisit stays visible without hover');
+  assert.match(await run('document.querySelector(".note-location").textContent'),/Decision course.*→.*01:32/);
+  await run('document.querySelector(".note-action").click();new Promise(r=>setTimeout(r,20))');
+  assert.equal(await run('requests.find(r=>r.type==="OPEN_NOTE").payload.id'),'one','Revisit sends the stored note ID');
+  await run('document.querySelector(".timestamp.btn-replay-note").click();new Promise(r=>setTimeout(r,20))');
+  assert.equal(await run('requests.filter(r=>r.type==="OPEN_NOTE").length'),2,'Timestamp is also a revisit entry');
+  await run('failSummary=true;document.querySelector(".note-action").click();new Promise(r=>setTimeout(r,20));failSummary=false;');
+  assert.equal(await run('document.querySelector(".note-replay-status").hidden'),false,'Failed navigation gives visible feedback');
+  assert.equal(await run('document.querySelector(".note-action").disabled'),false,'Failed navigation can be retried');
+
   await run(`window.dispatchEvent(new CustomEvent('kairos-note-updated',{detail:{id:'one',note:{...notes[0],updatedAt:2,originalContent:'结果、信息、选择',aiContent:notes[0].content,refinement:{status:'complete'},versions:[{originalContent:'旧关键词',aiContent:'先前的整理版'}]}}}));`);
   assert.equal(await run('document.querySelector("#note-one .note-version-original .version-text").textContent.trim()'),'结果、信息、选择');
   assert.ok(await run('document.querySelector("#note-one .note-versions").textContent.includes("不要只看结果")'));

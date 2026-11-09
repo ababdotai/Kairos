@@ -1,3 +1,4 @@
+import { resumeNoteReplay } from './content/note-replay.js';
 import './content/i18n.js';
 import './content/action_tips.js';
 import './content/delete_button.js';
@@ -37,6 +38,7 @@ import './content/sidepanel.js';
   const availability = window.Kairos.Availability;
   async function bootstrap() {
     await window.Kairos.I18n.init();
+    void resumeNoteReplay();
     await availability.init();
     let started = false;
     function startWhenEnabled() {

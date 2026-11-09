@@ -1963,7 +1963,7 @@
              this.savePinToStorage(pinData);
           }
         } else {
-          let errorMsg = response ? response.error : t("Unknown error");
+          let errorMsg = window.Kairos.I18n.aiErrorMessage(response);
           let errorTitle = t("AI Error");
           let actionText = null;
           let actionCallback = null;
@@ -2005,9 +2005,13 @@
 
           // Show user-facing error toast
           if (typeof errorMsg === 'string') {
-             if (errorMsg.includes('API Key') || errorMsg.includes('401') || errorMsg.includes('PERMISSION_DENIED')) {
+             if (response?.code === 'AI_NOT_CONFIGURED') {
+                errorTitle = t('Configure an AI provider first');
+                actionText = t('Configure');
+                actionCallback = () => { chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' }); };
+             } else if (/api key/i.test(errorMsg) || errorMsg.includes('401') || errorMsg.includes('PERMISSION_DENIED')) {
                 errorTitle = t("Authentication Failed");
-                errorMsg = t("Gemini API Key is missing or invalid.");
+                errorMsg = t("The selected provider’s API key is missing or invalid.");
                 actionText = t("Configure");
                 actionCallback = () => { chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' }); };
              } else if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('quota')) {
@@ -2266,6 +2270,9 @@
           videoId: pinData.videoId || info.videoId,
           videoUrl: pinData.videoUrl || info.url,
           videoTitle: pinData.videoTitle || info.title,
+          courseTitle: pinData.courseTitle || info.courseTitle || '',
+          lessonTitle: pinData.lessonTitle || info.lessonTitle || info.title,
+          lessonNumber: pinData.lessonNumber || info.lessonNumber || '',
           content: pinData.note || '',
           timestamp: pinData.timestamp,
           timeLabel: Utils.formatTime(pinData.timestamp),
@@ -2561,6 +2568,9 @@
         videoId: Utils.getVideoInfo().videoId,
         videoTitle: Utils.getVideoInfo().title,
         videoUrl: Utils.getVideoInfo().url,
+        courseTitle: Utils.getVideoInfo().courseTitle,
+        lessonTitle: Utils.getVideoInfo().lessonTitle,
+        lessonNumber: Utils.getVideoInfo().lessonNumber,
         source: 'user', // Default to user
         createdAt: Date.now()
       };

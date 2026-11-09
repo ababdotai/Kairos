@@ -51,7 +51,7 @@ export async function mountSummary(panel, video) {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'SUMMARIZE_VIDEO_NOTES', payload: { videoId: video.videoId, language: window.Kairos.I18n.locale } });
       if (!panel.isConnected) return;
-      if (!response?.success) throw new Error(response?.error || t('Could not generate summary. Check your AI settings and retry.'));
+      if (!response?.success) throw new Error(window.Kairos.I18n.aiErrorMessage(response));
       if (response.data.fingerprint !== fingerprint) throw new Error(t('Notes changed. Reopen this video and try again.'));
       editor.value = response.data.text;
       savedFingerprint = fingerprint;

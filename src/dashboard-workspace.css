@@ -74,3 +74,15 @@ body>.main{padding:48px clamp(24px,5vw,80px);scroll-behavior:smooth}#libraryView
 @media(max-width:900px){#settingsView .settings-topbar{top:-30px}#settingsView #providerGroup{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#settingsView .settings-topbar{top:0}#settingsView .settings-topbar .note-title{font-size:24px}#settingsView .settings-topbar p{font-size:10px}#settingsView #saveSettingsBtn{padding:9px 12px}#settingsView .settings-section{padding:18px;scroll-margin-top:100px}#settingsView #providerGroup{grid-template-columns:repeat(2,minmax(0,1fr))!important}#settingsView #uiLanguageGroup,#settingsView #languageConfig .radio-group{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-path{gap:6px}.settings-path a{font-size:10px}.settings-toast{bottom:16px;width:max-content}}
 @media(prefers-reduced-motion:reduce){.settings-toast{animation:none}}
+
+/* Card actions remain discoverable without hover, including touch and keyboard use. */
+.note-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto}
+.note-actions .btn-copy-note,.note-action{opacity:1;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--text-dim);padding:5px 9px;border-radius:8px;font:inherit;font-size:12px;cursor:pointer}
+.note-action:hover,.note-action:focus-visible{background:var(--hover-bg);color:var(--text)}
+button.timestamp{border:0;background:transparent;padding:0;text-align:left;cursor:pointer}
+button.timestamp:hover{text-decoration:underline;text-underline-offset:4px}
+.btn-replay-note:disabled{opacity:.5;cursor:wait}
+.note-location,.note-course-title,.video-item-course{font-size:12px;line-height:1.6;color:var(--text-dim);overflow-wrap:anywhere}
+.note-location{margin:-2px 0 14px}.note-course-title{margin-bottom:6px}.video-item-course{font-size:11px;margin-top:4px}
+.note-replay-status{font-size:12px;color:var(--danger,#b55);margin-bottom:12px}
+#libraryView .note-header-row{flex-wrap:wrap;gap:8px}

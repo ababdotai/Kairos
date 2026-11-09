@@ -17,6 +17,14 @@
     })();
   }
   const zh = {
+  "Configure your {provider} API key in Settings.": "请在设置中配置 {provider} 的 API 密钥。",
+  "The selected provider’s API key is missing or invalid.": "当前提供商的 API 密钥缺失或无效。",
+
+  "Returned to your note.": "已定位到笔记记录的时刻。",
+  "The player is not ready. Open this note again after the lesson loads.": "播放器尚未就绪，请在课节加载后重新点击回看。",
+  "This note is beyond the current video duration. Check the lesson.": "笔记时间超出了当前视频长度，请检查课节。",
+  "Could not locate this moment. Open this note again to retry.": "暂时无法定位到该时刻，请重新点击回看。",
+
   "Make Kairos feel like yours.": "按你的习惯，让 Kairos 更顺手。",
   "Settings sections": "设置分组",
   "Choose AI": "选择 AI",
@@ -261,5 +269,11 @@
     }
   }
   globalThis.Kairos = globalThis.Kairos || {};
-  globalThis.Kairos.I18n = { t, get locale() { return locale; }, get preference() { return preference; }, localize, init, setPreference };
+  function aiErrorMessage(response) {
+    if (response?.code !== 'AI_NOT_CONFIGURED') return response?.error || t('Unknown error');
+    return response.providerName
+      ? t('Configure your {provider} API key in Settings.', { provider: response.providerName })
+      : t('Configure an AI provider first');
+  }
+  globalThis.Kairos.I18n = { t, aiErrorMessage, get locale() { return locale; }, get preference() { return preference; }, localize, init, setPreference };
 })();

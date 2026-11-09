@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
-import { AI_PROVIDERS, resolveAI, resolveModel } from '../src/ai-providers.js';
+import { AI_PROVIDERS, resolveAI, resolveModel, isAIConfigurationError } from '../src/ai-providers.js';
 let seen, endpoint, finish, empty = false, httpOK = true;
 const context = vm.createContext({ resolveAI, AbortSignal,
   GoogleGenAI: class { models = { generateContent: async args => {seen=args;return {text:empty?'':'answer', candidates:[{finishReason:finish}]};} }; },
@@ -40,3 +40,14 @@ httpOK=false;await assert.rejects(invoke({aiProvider:'anthropic',anthropicApiKey
 empty=true;await assert.rejects(invoke({openaiApiKey:'test',aiProvider:'openai'},{prompt:'test'}),/no text/);empty=false;
 finish='length';await assert.rejects(invoke({openaiApiKey:'test',aiProvider:'openai'},{prompt:'test'}),/too long/);
 console.log('PASS: every curated model routes image/text correctly; key isolation, migration, failures, truncation and reasoning parameters');
+
+for (const [id, provider] of Object.entries(AI_PROVIDERS)) {
+  for (const key of [undefined, '', '   ', 42]) {
+    assert.throws(()=>resolveAI({aiProvider:id,[provider.keyField]:key}), error=>
+      isAIConfigurationError(error) && error.providerName===provider.name);
+  }
+}
+assert.equal(resolveAI({googleApiKey:' ',geminiApiKey:' legacy '}).apiKey,'legacy');
+assert.equal(resolveAI({aiProvider:'openai',openaiApiKey:' test-key '}).apiKey,'test-key');
+assert.equal(isAIConfigurationError(new Error('Storage unavailable')),false);
+console.log('PASS: typed configuration errors and whitespace keys across every provider');

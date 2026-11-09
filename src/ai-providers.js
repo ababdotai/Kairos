@@ -8,21 +8,28 @@ export const AI_PROVIDERS = {
   openrouter: { name: 'OpenRouter', color: '#ab90cf', description: 'Try different AI brands with one account.', keyHelpLink: 'https://openrouter.ai/settings/keys', keyHelpText: 'OpenRouter', keyPlaceholder: 'sk-or-…', keyField: 'openrouterApiKey', baseURL: 'https://openrouter.ai/api/v1', models: ['openai/gpt-5.4-mini', 'anthropic/claude-sonnet-5.5'], labels: ['Balanced for everyday use', 'More detailed understanding'] }
 };
 export const AI_SETTINGS_KEYS = ['aiProvider', 'aiModel', 'providerModels', 'geminiApiKey', 'noteLanguage', ...Object.values(AI_PROVIDERS).map(p => p.keyField)];
+export function isAIConfigurationError(error) {
+  return error?.code === 'AI_NOT_CONFIGURED';
+}
+function configurationError(message, providerName) {
+  return Object.assign(new Error(message), { code: 'AI_NOT_CONFIGURED', providerName });
+}
 export function resolveModel(provider, saved) {
   const config = AI_PROVIDERS[provider];
-  if (!config) throw new Error('Unsupported AI provider. Please choose a provider in Settings.');
+  if (!config) throw configurationError('Unsupported AI provider. Please choose a provider in Settings.');
   const upgrades = { openai: { 'gpt-5.4-mini': 'gpt-6.1-terra', 'gpt-5.4-nano': 'gpt-6-luna' } };
   const model = upgrades[provider]?.[saved] || saved;
   const legacy = { google: ['gemini-3-flash-preview'] };
   return [...config.models, ...(legacy[provider] || [])].includes(model) ? model : config.models[0];
 }
-export function resolveAI(settings) {
+export function resolveAI(settings = {}) {
   const provider = settings.aiProvider || 'google';
   const config = AI_PROVIDERS[provider];
-  if (!config) throw new Error('Unsupported AI provider. Please choose a provider in Settings.');
+  if (!config) throw configurationError('Unsupported AI provider. Please choose a provider in Settings.');
   const saved = settings.providerModels?.[provider] || settings.aiModel;
   const model = resolveModel(provider, saved);
-  const apiKey = settings[config.keyField] || (provider === 'google' ? settings.geminiApiKey : '');
-  if (!apiKey) throw new Error(`Configure your ${config.name} API key in Settings.`);
+  const cleanKey = value => typeof value === 'string' ? value.trim() : '';
+  const apiKey = cleanKey(settings[config.keyField]) || (provider === 'google' ? cleanKey(settings.geminiApiKey) : '');
+  if (!apiKey) throw configurationError(`Configure your ${config.name} API key in Settings.`, config.name);
   return { provider, config, model, apiKey };
 }

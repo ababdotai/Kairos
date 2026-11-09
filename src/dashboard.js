@@ -350,7 +350,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!videos[note.videoId]) {
                 videos[note.videoId] = {
                     videoId: note.videoId,
-                    title: note.videoTitle || 'Untitled Video',
+                    title: note.lessonTitle || note.videoTitle || 'Untitled Video',
+                    courseTitle: note.courseTitle || '',
                     url: note.videoUrl,
                     notes: [],
                     lastUpdated: 0
@@ -371,6 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 item.className = 'video-item';
                 item.innerHTML = `
                     <div class="video-item-title">${escapeText(video.title)}</div>
+                    ${video.courseTitle ? `<div class="video-item-course">${escapeText(video.courseTitle)}</div>` : ''}
                     <div class="video-item-meta">
                         <span>${t("{count} notes", { count: video.notes.length })}</span>
                         <span>${new Date(video.lastUpdated).toLocaleDateString()}</span>
@@ -398,8 +400,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         libraryViewEl.innerHTML = `
             <div class="note-header">
                 <div class="note-meta" style="color: #aaa; font-size: 13px; margin-bottom: 8px;">
-                    <a href="${video.url}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px dotted #aaa;">${t("View Source Video \u2197")}</a>
+                    <a href="${escapeText(video.url)}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px dotted #aaa;">${t("View Source Video \u2197")}</a>
                 </div>
+                ${video.courseTitle ? `<div class="note-course-title">${escapeText(video.courseTitle)}</div>` : ''}
                 <div class="note-title">${escapeText(video.title)}</div>
                 <div class="workspace-toolbar">
                     <span class="workspace-count">${t('{count} notes',{count:video.notes.length})}<span> · ${label('Saved on this device','保存在此设备')}</span></span>
@@ -420,14 +423,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         
                         <div class="note-header-row">
                              <div class="timestamp-group">
-                                <span class="timestamp">${note.timeLabel}</span>
+                                <button class="timestamp btn-replay-note" data-note-id="${escapeText(note.id)}" data-help="${label('Reopen this lesson at this moment','打开此课节并定位到记录时刻')}">${escapeText(note.timeLabel)}</button>
                                 <span class="note-badge ${note.source === 'ai' ? 'ai' : 'user'}">${note.source === 'ai' ? 'AI' : t("You")}</span>
                              </div>
+                             <div class="note-actions">
+                             <button class="btn-replay-note note-action" data-note-id="${escapeText(note.id)}" data-help="${label('Reopen this lesson at this moment','打开此课节并定位到记录时刻')}">
+                               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 3 10l6 5M3 10h10a7 7 0 0 1 7 7v2"/></svg>
+                               ${label('Revisit','回看')}
+                             </button>
                              <button class="btn-copy-note" data-note-id="${note.id}" title="${t('Copy note text')}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                 ${t("Copy")}
                              </button>
+                             </div>
                         </div>
+                        <div class="note-location">${escapeText([note.courseTitle, note.lessonTitle || note.videoTitle, note.timeLabel].filter(Boolean).join(' → '))}</div>
+                        <div class="note-replay-status" role="status" hidden></div>
 
                         <div class="note-body ${note.source === 'ai' ? 'ai-note' : 'user-note'}">
                             <div class="content">${renderNoteVersions(note)}</div>
@@ -511,6 +522,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             image.onclick = open;
             image.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } };
+        });
+
+        libraryViewEl.querySelectorAll('.btn-replay-note').forEach(button => {
+            button.addEventListener('click', async () => {
+                const entry = button.closest('.note-entry');
+                const controls = entry.querySelectorAll('.btn-replay-note');
+                const status = entry.querySelector('.note-replay-status');
+                const note = video.notes.find(item => String(item.id) === button.dataset.noteId);
+                if (!note) return;
+                controls.forEach(control => control.disabled = true);
+                status.hidden = true;
+                try {
+                    const result = await chrome.runtime.sendMessage({ type: 'OPEN_NOTE', payload: { id: note.id } });
+                    if (!result?.success) throw new Error(result?.error || 'No response');
+                } catch {
+                    status.textContent = label('Could not reopen this note. Check the saved source and try again.', '暂时无法打开此笔记，请检查原视频地址后重试。');
+                    status.hidden = false;
+                } finally { controls.forEach(control => control.disabled = false); }
+            });
         });
 
         // Bind Copy Buttons

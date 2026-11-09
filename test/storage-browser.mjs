@@ -50,12 +50,35 @@ try {
   await call('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/`});
   await run('new Promise(r=>setTimeout(r,100))');
   await run('window.chrome={runtime:{onMessage:{addListener:fn=>window.handler=fn}}};window.Kairos={log:()=>{}}');
+  await run((await readFile(new URL('../src/ai-providers.js',import.meta.url),'utf8')).replace(/^export /gm,''));
   await run((await readFile(new URL('../src/note-refinement.js',import.meta.url),'utf8')).replace(/^export /gm,''));
+  await run(await readFile(new URL('../src/content/utils.js',import.meta.url),'utf8'));
+  for (const file of ['note-location','note-replay']) {
+    await run((await readFile(new URL('../src/'+file+'.js',import.meta.url),'utf8')).replace(/^import .*;\s*$/gm,'').replace(/^export /gm,''));
+  }
+  await run(`new Promise((resolve,reject)=>{
+    const req=indexedDB.open('KairosDB',1);
+    req.onupgradeneeded=()=>{const store=req.result.createObjectStore('notes',{keyPath:'id'});store.createIndex('videoId','videoId');};
+    req.onsuccess=()=>{
+      const db=req.result,tx=db.transaction('notes','readwrite'),store=tx.objectStore('notes');
+      for(const part of [1,2])store.put({id:'part-'+part,videoId:'bili-BV123',videoUrl:'https://www.bilibili.com/video/BV123/?p='+part,videoTitle:'Introduction',timestamp:163,content:'Keep '+part,imageUrl:'image-'+part});
+      tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);
+    };req.onerror=()=>reject(req.error);
+  })`);
   const background=await readFile(new URL('../src/background.js',import.meta.url),'utf8');
   await run(background.slice(background.indexOf('const DB_NAME'),background.indexOf('// --- Gemini API Logic ---')));
   await run('chrome.runtime.sendMessage=(message,callback)=>handler(message,{},callback)');
   await run(await readFile(new URL('../src/content/storage.js',import.meta.url),'utf8'));
   await run('window.store=new Kairos.StorageManager()');
+  for (const part of [1,2]) {
+    const records=await run(`store.getNotesForVideo('bili-BV123:p${part}')`);
+    assert.equal(records.length,1,'Legacy notes migrate into separate part indexes');
+    assert.equal(records[0].content,'Keep '+part);
+    assert.equal(records[0].imageUrl,'image-'+part);
+    assert.equal(records[0].lessonNumber,'P'+part);
+  }
+  assert.equal((await run('store.getNotesForVideo("bili-BV123")')).length,0);
+
   for (const id of ['note-string', 1234]) {
     await run(`store.saveNote({id:${JSON.stringify(id)},videoId:'test',content:'Delete me'})`);
     assert.equal((await run('store.getNotesForVideo("test")')).length,1);

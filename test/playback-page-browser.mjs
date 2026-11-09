@@ -104,8 +104,8 @@ try {
   await run(await readFile(new URL('../src/content/tracker.js',import.meta.url),'utf8'));
   for(const [url,id] of [
     ['https://www.bilibili.com/',null],['https://www.bilibili.com/opus/123456',null],['https://www.bilibili.com/space/123',null],
-    ['https://www.bilibili.com/?next=/video/BV123',null],['https://www.bilibili.com/video/BV123?p=2','bili-BV123'],
-    ['https://www.bilibili.com/video/av123/','bili-/video/av123/'],['https://www.bilibili.com/bangumi/play/ep123','bili-/bangumi/play/ep123'],
+    ['https://www.bilibili.com/?next=/video/BV123',null],['https://www.bilibili.com/video/BV123?p=2','bili-BV123:p2'],
+    ['https://www.bilibili.com/video/av123/','bili-av123:p1'],['https://www.bilibili.com/bangumi/play/ep123','bili-/bangumi/play/ep123'],
     ['https://www.youtube.com/',null],['https://www.youtube.com/results?v=abc',null],['https://www.youtube.com/watch',null],
     ['https://www.youtube.com/watch?v=abc-123','yt-abc-123'],['https://www.youtube.com/shorts/abc-123/?feature=share','yt-abc-123'],
     ['https://notyoutube.com/watch?v=abc',null],['https://www.bilibili.com.evil.test/video/BV123',null]

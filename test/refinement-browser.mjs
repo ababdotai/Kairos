@@ -57,9 +57,13 @@ try {
     window.generateAI=(settings,options)=>new Promise((resolve,reject)=>jobs.push({options,resolve,reject}));`);
   await run((await readFile(new URL('../src/ai-providers.js',import.meta.url),'utf8')).replace(/^export /gm,''));
   await run((await readFile(new URL('../src/note-refinement.js',import.meta.url),'utf8')).replace(/^export /gm,''));
+  await run(await readFile(new URL('../src/content/utils.js',import.meta.url),'utf8'));
+  for (const file of ['note-location','note-replay']) {
+    await run((await readFile(new URL('../src/'+file+'.js',import.meta.url),'utf8')).replace(/^import .*;\s*$/gm,'').replace(/^export /gm,''));
+  }
   const background=await readFile(new URL('../src/background.js',import.meta.url),'utf8');
   await run(background.slice(background.indexOf('const DB_NAME'),background.indexOf('// --- Gemini API Logic ---')));
-  await run('chrome.runtime.sendMessage=(message,callback)=>handler(message,{},callback)');
+  await run('chrome.runtime.sendMessage=(message,callback)=>callback?handler(message,{},callback):new Promise(resolve=>handler(message,{},resolve))');
   await run(await readFile(new URL('../src/content/storage.js',import.meta.url),'utf8'));
   await run('window.store=new Kairos.StorageManager()');
   const act = expression => run(`(async()=>{${expression}})()`);
@@ -73,6 +77,18 @@ try {
   assert.deepEqual(await run('ask("SET_AUTO_REFINE",{enabled:true})'),{status:'configuration_required'});
   assert.equal(await run('backgroundErrors.length'),0,'Missing configuration is not logged as a background error');
   assert.equal(await run('settings.autoRefineNotes'),false,'Missing configuration does not enable AI');
+  for (const provider of ['google','openai','anthropic','deepseek','moonshot','openrouter','unknown']) {
+    await run(`settings.aiProvider=${JSON.stringify(provider)}`);
+    for (const type of ['ANALYZE_FRAME','ANALYZE_SUBTITLES','GENERATE_HUD_SCRIPT','SUMMARIZE_VIDEO_NOTES','GENERATE_SHARE_PAGE']) {
+      const result=await run(`new Promise(resolve=>handler({type:${JSON.stringify(type)},payload:{}},{},resolve))`);
+      assert.equal(result.success,false);
+      assert.equal(result.code,'AI_NOT_CONFIGURED',provider+' '+type);
+    }
+  }
+  assert.equal(await run('jobs.length'),0,'Missing keys never dispatch a provider request');
+  assert.equal(await run('backgroundErrors.length'),0,'Every AI entry treats missing configuration as UI state');
+  await run('settings.aiProvider="openai"');
+
   await run('window.originalGet=chrome.storage.sync.get;chrome.storage.sync.get=async()=>{throw Error("Storage unavailable")};');
   assert.equal(await run('ask("SET_AUTO_REFINE",{enabled:true}).catch(e=>e.message)'),'Storage unavailable');
   assert.equal(await run('backgroundErrors.length'),1,'Real storage failures remain reported');
@@ -120,6 +136,16 @@ try {
   assert.deepEqual(await run('[toggle.getAttribute("aria-pressed"),islandToggle.getAttribute("aria-pressed")]'),['false','false']);
   assert.equal(await run('toggle.dataset.kairosTip'),'请先在设置中配置 AI 提供商');
   assert.equal(await run('backgroundErrors.length'),0,'Configuration guidance does not emit background errors');
+  await act(`settings.aiProvider='google';window.aiToast=null;window.originalShowError=o.showError;o.showError=(...args)=>aiToast=args;
+    o.requestAIAnalysis({},'');await waitFor(()=>aiToast!==null);`);
+  assert.equal(await run('aiToast[0]'),'请先在设置中配置 AI 提供商');
+  assert.equal(await run('aiToast[1]'),'请在设置中配置 Google Gemini 的 API 密钥。');
+  assert.equal(await run('aiToast[2]'),'前往设置');
+  await run('aiToast[3]();');
+  assert.equal(await run('openedTabs.at(-1).url'),'/src/dashboard.html?tab=settings');
+  assert.equal(await run('backgroundErrors.length'),0,'Manual AI entry offers settings without a worker error');
+  await run('o.showError=originalShowError;settings.aiProvider="openai"');
+
   await run('settings.openaiApiKey="test-key";');
   await act('toggle.click();await waitFor(()=>islandToggle.textContent==="AI 开启")');
   assert.equal(await run('settings.autoRefineNotes'),true);

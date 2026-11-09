@@ -16,7 +16,7 @@ const routes = [
   ['https://www.youtube.com/', null], ['https://www.youtube.com/watch', null],
   ['https://www.bilibili.com/', null], ['https://youtube.com.example.com/watch?v=abc', null],
   ['https://www.youtube.com/watch?v=abc', 'yt-abc'], ['https://www.youtube.com/shorts/xyz', 'yt-xyz'],
-  ['https://www.bilibili.com/video/BV123/', 'bili-BV123']
+  ['https://www.bilibili.com/video/BV123/', 'bili-BV123:p1']
 ];
 const cases = [
   ...routes.map(([url, expected]) => ({ url, expected })),
