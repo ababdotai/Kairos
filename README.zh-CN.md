@@ -6,9 +6,13 @@
   <img src="website/public/assets/avatar.gif" alt="Kairos" width="88" />
 </p>
 
-<h1 align="center">Kairos · 一起看，随手记</h1>
+<h1 align="center">Kairos</h1>
 
-<p align="center">陪你看视频，也帮你留住自己的想法。</p>
+<p align="center">
+  <em><strong>Kairos = Vital Moments.</strong></em><br/>
+  <strong>Watch together. Remember more.</strong><br/>
+  Transform linear videos into queryable knowledge bases.
+</p>
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/kairos-your-ai-video-note/idhcehbbnfdklhbondmbpplpcdbnodfp"><strong>🚀 免费安装</strong></a> ·
