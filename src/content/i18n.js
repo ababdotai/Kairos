@@ -17,6 +17,14 @@
     })();
   }
   const zh = {
+  "Make Kairos feel like yours.": "按你的习惯，让 Kairos 更顺手。",
+  "Settings sections": "设置分组",
+  "Choose AI": "选择 AI",
+  "Connect account": "连接账号",
+  "Note language": "笔记语言",
+  "Dismiss notification": "关闭提示",
+  "Interface language saved.": "界面语言已保存。",
+
   "Disable Kairos": "禁用 Kairos",
   "Disable for this viewing": "仅本次观看禁用",
   "Disable globally": "全局禁用",

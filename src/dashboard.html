@@ -835,6 +835,7 @@
         @media (max-width: 650px) { #providerGroup { grid-template-columns: 1fr; } }
     </style>
     <link rel="stylesheet" href="./dashboard-workspace.css">
+    <link rel="stylesheet" href="./settings-timeline.css">
 </head>
 
 <body>
@@ -883,19 +884,21 @@
             </div>
         </div>
 
-        <div id="settingsView" style="display: none; max-width: 1000px; margin: 0 auto;">
-            <div class="note-header">
-                <div class="note-title"><span data-i18n="Settings">Settings</span></div>
-            </div>
+        <div id="settingsView" style="display: none;">
+            <header class="settings-topbar">
+                <div><div class="note-title" data-i18n="Settings">Settings</div><p data-i18n="Make Kairos feel like yours.">Make Kairos feel like yours.</p></div>
+                <button id="saveSettingsBtn" class="action-btn primary"><span aria-hidden="true">✓</span> <span data-i18n="Save Settings">Save Settings</span></button>
+            </header>
+
 
             <div class="settings-grid">
-                <div class="settings-section provider-section">
+                <div class="settings-section provider-section" id="providerConfig" data-step="01" tabindex="-1">
                     <h3><span data-i18n="AI Model Provider">AI Model Provider</span></h3>
                     <p class="provider-intro" data-i18n="Choose who helps Kairos read screenshots and organize notes. You only need one account.">Choose who helps Kairos read screenshots and organize notes. You only need one account.</p>
                     <div class="radio-group" id="providerGroup" role="radiogroup" aria-label="AI provider"></div>
                 </div>
 
-                <div class="settings-section" id="modelConfig">
+                <div class="settings-section" id="modelConfig" data-step="02" tabindex="-1">
                     <h3><span data-i18n="Model Configuration">Model Configuration</span></h3>
                     <p class="provider-intro" data-i18n="All listed models can read screenshots and summarize notes. Start with the first option; choose a more detailed model for complex diagrams.">All listed models can read screenshots and summarize notes. Start with the first option; choose a more detailed model for complex diagrams.</p>
                     
@@ -924,7 +927,7 @@
                     </div>
                 </div>
 
-                <div class="settings-section" style="grid-column: 1 / -1;">
+                <div class="settings-section" id="interfaceConfig" data-step="03" tabindex="-1">
                     <h3 id="uiLanguageHeading" data-i18n="Interface language">Interface language</h3>
                     <p style="color: var(--text-dim); font-size: 14px;" data-i18n="Saved automatically. Refresh open video pages to apply. Does not change the AI note language.">Saved automatically. Refresh open video pages to apply. Does not change the AI note language.</p>
                     <div id="uiLanguageGroup" class="radio-group" role="radiogroup" aria-labelledby="uiLanguageHeading">
@@ -952,7 +955,7 @@
                     </div>
                 </div>
 
-                <div class="settings-section" id="languageConfig">
+                <div class="settings-section" id="languageConfig" data-step="04" tabindex="-1">
                 <h3><span data-i18n="Note Language Preference">Note Language Preference</span></h3>
                 <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 12px;"><span data-i18n="AI will prioritize this language when generating notes. If not set, it will use the video&#x27;s primary language.">AI will prioritize this language when generating notes. If not set, it will use the video&#x27;s primary language.</span></p>
                 <div class="radio-group">
@@ -1029,12 +1032,13 @@
                 </div>
             </div> -->
 
-            <div id="statusMessage" class="status-message"></div>
-            <button id="saveSettingsBtn" class="action-btn primary" style="width: 100%; margin-top: 16px;"><span data-i18n="Save Settings">Save Settings</span></button>
+            <div id="statusMessage" class="settings-toast" hidden><span class="toast-symbol" aria-hidden="true"></span><span class="toast-message" role="status" aria-live="polite" aria-atomic="true"></span><button type="button" data-dismiss-toast aria-label="Dismiss notification" data-i18n-aria-label="Dismiss notification">×</button></div>
+
         </div>
     </div>
 
     <script type="module" src="dashboard.js"></script>
+    <script type="module" src="settings-timeline.js"></script>
 </body>
 
 </html>

@@ -251,7 +251,9 @@ try {
   assert.notEqual(await run('getComputedStyle(o.islandList).display'),'none','Windowed island also shows notes');
   assert.equal(await run('side.container.hidden'),false,'Windowed sidebar visible');
   assert.equal(await run('side.notes.length'),await run('new Set(saved.map(n=>n.id)).size'),'Sidebar upserts edited notes');
-  await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  await call('Page.bringToFront');
+  {const fullscreenResult=await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  assert.ok(!fullscreenResult.exceptionDetails,JSON.stringify(fullscreenResult.exceptionDetails));}
   await run('new Promise(r=>setTimeout(r,150))');
   assert.equal(await run('!!document.fullscreenElement'),true,'Real fullscreen entered');
   assert.equal(await run('side.container.hidden'),true,'Fullscreen hides sidebar');
@@ -383,11 +385,13 @@ try {
   assert.equal(await run('o.isActive'),true,'Expanded toggle enables companion');
   await mouse('mousePressed',togglePoint.x,togglePoint.y,1);await mouse('mouseReleased',togglePoint.x,togglePoint.y);
   assert.equal(await run('o.isActive'),false,'Expanded toggle disables companion');
-  await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  await call('Page.bringToFront');
+  {const fullscreenResult=await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  assert.ok(!fullscreenResult.exceptionDetails,JSON.stringify(fullscreenResult.exceptionDetails));}
   await run('new Promise(r=>setTimeout(r,150))');
   const notePoint = await run('(() => {const r=o.islandMoments.querySelector(".kairos-island-moment").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()');
   await mouse('mousePressed',notePoint.x,notePoint.y,1);await mouse('mouseReleased',notePoint.x,notePoint.y);
-  assert.equal(await run('o.isEditing && o.activePin.savedToStorage'),true,'List click opens a saved note for editing');
+  assert.equal(await run('!o.isEditing && o.activePin.savedToStorage'),true,'List click opens a saved note in Markdown reading mode');
   assert.equal(await run('o.isActive'),true,'List click can activate companion');
   const beforeBrowse = await run('saved.length');
   await run('clearTimeout(o.islandFeedbackTimer);delete o.orbElement.dataset.feedback;o.islandEntries[1].open.click();new Promise(r=>setTimeout(r,30))');
@@ -417,7 +421,9 @@ try {
   await run('video.style.width="720px";video.style.height="405px";o.updatePosition(video.getBoundingClientRect(),video)');
   const inBounds = await run('(() => {const r=o.islandContainer.getBoundingClientRect(),v=video.getBoundingClientRect();return r.left>=v.left&&r.right<=v.right&&r.top>=v.top&&r.bottom<=v.bottom})()');
   assert.equal(inBounds,true,'Dragged island stays inside resized video');
-  await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  await call('Page.bringToFront');
+  {const fullscreenResult=await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  assert.ok(!fullscreenResult.exceptionDetails,JSON.stringify(fullscreenResult.exceptionDetails));}
   await run(`new Promise(r=>setTimeout(r,150))`);
   await run(`o.setIslandPinned(true); o.pins=Array.from({length:24},(_,i)=>({id:'follow-'+i,timestamp:i*10,note:'Playback note '+i,savedToStorage:true})); o.renderIslandNotes()`);
   await run('new Promise(r=>setTimeout(r,450))');
@@ -505,7 +511,9 @@ try {
   await run('new Promise(r=>setTimeout(r,100))');
   assert.equal(await run('o.islandContainer.getBoundingClientRect().height<=186'),true,'Video height also caps the expanded island');
   assert.equal(await run('o.islandList.scrollHeight>o.islandList.clientHeight'),true,'Notes scroll when video is shorter than content');
-  await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  await call('Page.bringToFront');
+  {const fullscreenResult=await call('Runtime.evaluate',{expression:'document.documentElement.requestFullscreen()',awaitPromise:true,userGesture:true});
+  assert.ok(!fullscreenResult.exceptionDetails,JSON.stringify(fullscreenResult.exceptionDetails));}
   await run('new Promise(r=>setTimeout(r,150))');
   await run(`window.deletes=[];window.confirm=()=>{throw Error('Native confirmation must never open')};
     o.storage.deleteNote=async id=>deletes.push(id);side.refresh=()=>{};

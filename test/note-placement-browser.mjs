@@ -173,6 +173,22 @@ try {
   assert.ok(replayBox.left>=52 && replayBox.right<=508 && replayBox.top>=112 && replayBox.bottom+32<=replayBox.safeBottom+1,'Long screenshot previews fit a resized video above the controls');
   assert.equal(await run('getComputedStyle(replay.spatialTooltip).overflowY'),'auto');
   assert.deepEqual(await run('[replay.spatialX,replay.spatialY]'),[10,40],'Presentation changes preserve capture metadata');
+  await run(`video.style.width='960px';video.style.height='540px';o.updatePosition(video.getBoundingClientRect(),video);window.mdPin={id:'md-test',timestamp:25,note:'### Course Overview\\n\\n- **Solar System:** Report on planetary exploration missions.\\n- **Stars and Extrasolar Planets:** Report on astronomy missions.',savedToStorage:true};o.pins.push(mdPin);o.renderIslandNotes();o.openNoteInput(mdPin,false);new Promise(r=>setTimeout(r,600))`);
+  assert.equal(await run('o.notePreview.querySelector("h3").textContent'),'Course Overview');
+  assert.equal(await run('o.islandList.querySelectorAll("strong").length>0'),true,'Island preview renders Markdown');
+  assert.equal(await run('o.islandList.textContent.includes("###")'),false);
+  assert.ok((await geometry()).width>320,'Long notes automatically receive more width');
+  const edge=await run('(()=>{const r=o.noteWrapper.querySelector("[data-edge=w]").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()');
+  await call('Input.dispatchMouseEvent',{type:'mousePressed',...edge,button:'left',clickCount:1});
+  await call('Input.dispatchMouseEvent',{type:'mouseMoved',x:edge.x+120,y:edge.y,button:'left',buttons:1});
+  await call('Input.dispatchMouseEvent',{type:'mouseReleased',x:edge.x+120,y:edge.y,button:'left',clickCount:1});
+  assert.equal(await run('o.noteSizes.has(mdPin)'),true,'Pointer resize belongs to this pin');
+  const resized=await geometry();
+  await run(`o.openNoteInput({id:'other-note',timestamp:30,note:'Short note'},false);new Promise(r=>setTimeout(r,600))`);
+  assert.ok((await geometry()).width<400,'Other notes use their own automatic dimensions');
+  await run(`o.openNoteInput(mdPin,false);new Promise(r=>setTimeout(r,600))`);
+  assert.ok(Math.abs((await geometry()).width-resized.width)<2,'Only this note retains its temporary width');
+  await writeFile(join(profile,'note-markdown-resize.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   console.log('PASS: note placement, drag persistence, natural playback, legacy capture coordinates, resize bounds and hover/fade');
   console.log('Preview: '+screenshotPath);
 } finally {

@@ -403,6 +403,7 @@
 
       notePreview.addEventListener('click', (e) => {
         e.stopPropagation();
+        if(window.getSelection()?.toString())return;
         this.switchToEditMode();
       });
 
@@ -622,7 +623,7 @@
         time.textContent = Utils.formatTime(pin.timestamp);
         const content = document.createElement('span');
         content.className = 'kairos-island-note-copy';
-        content.textContent = pin.note || (pin.imageUrl ? t("Screenshot") : t("Empty note"));
+        content.innerHTML = SimpleMarkdown.parse(pin.note || (pin.imageUrl ? t("Screenshot") : t("Empty note")));
         open.title = content.textContent;
         open.append(time, content);
         open.addEventListener('click', async (event) => {
@@ -637,7 +638,7 @@
             this.videoElement.pause();
             this.videoElement.currentTime = pin.timestamp;
           }
-          this.openNoteInput(pin, true);
+          this.openNoteInput(pin, false);
         });
         const moment = document.createElement('button');
         moment.className = 'kairos-island-moment';
@@ -1324,7 +1325,8 @@
 
       const tooltip = document.createElement('div');
       tooltip.className = 'kairos-spatial-tooltip';
-      tooltip.textContent = pin.note || '';
+      tooltip.innerHTML = SimpleMarkdown.parse(pin.note || '');
+      tooltip.addEventListener('click',event=>{event.stopPropagation();this.openNoteInput(pin,false);});
       tooltip.addEventListener('pointerenter', () => {
         clearTimeout(pin.spatialFadeTimer);
         pin.spatialFadeTimer = null;
@@ -1356,6 +1358,8 @@
       if (!tooltip || !pin.spatialMarker) return;
       const rect = this.overlayElement.getBoundingClientRect();
       const safeBottom = this.companionInput?.captureBottom ?? 80;
+      tooltip.style.width=`${Math.min(Math.max(100,rect.width-24),760,280+Math.sqrt((pin.note||'').length)*9)}px`;
+      tooltip.style.maxWidth=`${Math.max(100,rect.width-24)}px`;
       tooltip.style.maxHeight = `${Math.max(36, rect.height - safeBottom - 44)}px`;
       const { left, top } = this.notePlacement(tooltip, rect.width, rect.height);
       tooltip.style.left = `${left}px`;
@@ -1444,10 +1448,75 @@
       }
     }
 
+    /** Per-pin sizing lives only in memory; it never changes the next note's defaults. */
+    fitNoteSize(width,height) {
+      if(!this.activePin||!width||!height)return;
+      this.noteSizes ||= new WeakMap();
+      const manual=this.noteSizes.get(this.activePin);
+      const text=this.noteInput.value||this.activePin.note||'';
+      const image=!!this.capturePreview&&!this.capturePreview.hidden;
+      const key=JSON.stringify([width,height,text,this.isEditing,manual,image]);
+      if(key===this.noteSizeSignature)return;
+      this.noteSizeSignature=key;
+      const available=Math.max(60,height-(this.companionInput?.captureBottom??80)-44);
+      const imageHeight=image?Math.min(76,Math.max(0,available-96)):0;
+      const longest=Math.max(0,...text.split('\n').map(line=>line.length));
+      const maxWidth=Math.max(80,Math.min(width-24,760,Math.max(320,longest*7+80)));
+      const minWidth=Math.min(240,maxWidth);
+      const minHeight=Math.min(70,available);
+      const element=this.isEditing?this.noteInput:this.notePreview;
+      let chosen=Math.max(minWidth,Math.min(maxWidth,manual?.width||320+Math.sqrt(text.length)*9));
+      const measure=()=>{this.noteWrapper.style.width=chosen+'px';element.style.height='auto';return element.scrollHeight;};
+      let natural=measure();
+      if(!manual){while(natural>Math.min(280,available*.65)&&chosen<maxWidth){chosen=Math.min(maxWidth,chosen+48);natural=measure();}}
+      const maxHeight=Math.max(minHeight,Math.min(available,natural+imageHeight+14));
+      const chosenHeight=manual?Math.max(minHeight,Math.min(maxHeight,manual.height)):maxHeight;
+      this.noteContentHeight=Math.max(28,chosenHeight-imageHeight-14);
+      this.noteWrapper.style.maxHeight=chosenHeight+'px';
+      this.noteWrapper.style.height='auto';
+      element.style.height=this.noteContentHeight+'px';
+      element.style.maxHeight=this.noteContentHeight+'px';
+      this.noteWrapper.style.setProperty('--note-text-height',this.noteContentHeight+'px');
+      this.noteSizeLimits={minWidth,maxWidth,minHeight,maxHeight};
+    }
+
+    setupNoteResize(options) {
+      for(const direction of ['n','s','e','w','ne','nw','se','sw']){
+        const edge=document.createElement('div');edge.className='kairos-note-resize';edge.dataset.edge=direction;edge.setAttribute('aria-hidden','true');this.noteWrapper.append(edge);
+        let drag;
+        edge.addEventListener('pointerdown',event=>{
+          if(event.button!==0||!this.activePin)return;
+          event.preventDefault();event.stopPropagation();
+          drag={left:this.noteWrapper.offsetLeft,top:this.noteWrapper.offsetTop,id:event.pointerId,x:event.clientX,y:event.clientY,width:this.noteWrapper.offsetWidth,height:this.noteWrapper.offsetHeight,pin:this.activePin};
+          edge.setPointerCapture(event.pointerId);this.noteWrapper.classList.add('is-resizing');
+        },options);
+        edge.addEventListener('pointermove',event=>{
+          if(!drag||drag.id!==event.pointerId||drag.pin!==this.activePin)return;
+          event.preventDefault();event.stopPropagation();
+          const limits=this.noteSizeLimits;
+          const dx=(event.clientX-drag.x)*(direction.includes('w')?-1:1),dy=(event.clientY-drag.y)*(direction.includes('n')?-1:1);
+          const width=direction.match(/[ew]/)?Math.max(limits.minWidth,Math.min(limits.maxWidth,drag.width+dx)):drag.width;
+          const height=direction.match(/[ns]/)?Math.max(limits.minHeight,drag.height+dy):drag.height;
+          const previous=this.noteSizes.get(drag.pin);
+          this.noteSizes.set(drag.pin,{width,height,anchor:previous?.anchor});this.alignNote();
+          const box=this.overlayElement.getBoundingClientRect();
+          const bounds=this.notePlacementBounds(box.width,box.height);
+          const left=drag.left+(direction.includes('w')?drag.width-this.noteWrapper.offsetWidth:0);
+          const top=drag.top+(direction.includes('n')?drag.height-this.noteWrapper.offsetHeight:0);
+          this.noteSizes.get(drag.pin).anchor={x:bounds.width?Math.max(0,Math.min(1,(left-bounds.left)/bounds.width)):0,y:bounds.height?Math.max(0,Math.min(1,(top-bounds.top)/bounds.height)):0};
+          this.alignNote();
+        },options);
+        const end=event=>{if(drag&&event.pointerId===drag.id){drag=null;this.noteWrapper.classList.remove('is-resizing');if(edge.hasPointerCapture(event.pointerId))edge.releasePointerCapture(event.pointerId);}};
+        edge.addEventListener('pointerup',end,options);edge.addEventListener('pointercancel',end,options);edge.addEventListener('lostpointercapture',end,options);
+        edge.addEventListener('click',event=>event.stopPropagation(),options);
+      }
+    }
+
     /** Editor placement is independent of the captured region's spatial coordinates. */
     setupNoteDrag() {
       this.noteDragController = new AbortController();
       const options = { signal: this.noteDragController.signal };
+      this.setupNoteResize(options);
       this.noteAnchor = { x: .5, y: 1 };
       chrome.storage.local.get('noteEditorAnchor').then(({ noteEditorAnchor: anchor }) => {
         if (this.noteDragController.signal.aborted || this.notePositionChanged) return;
@@ -1461,6 +1530,7 @@
         event.preventDefault();
         event.stopPropagation();
         const rect = this.noteWrapper.getBoundingClientRect();
+        const manual=this.noteSizes?.get(this.activePin);if(manual)delete manual.anchor;
         this.noteDrag = { id: event.pointerId, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
         this.noteWrapper.classList.add('is-dragging');
         this.noteHandle.setPointerCapture(event.pointerId);
@@ -1528,17 +1598,18 @@
 
     notePlacement(element, width, height) {
       const bounds = this.notePlacementBounds(width, height, element);
-      const anchor = this.noteAnchor || { x: .5, y: 1 };
+      const anchor = (element===this.noteWrapper && this.noteSizes?.get(this.activePin)?.anchor) || this.noteAnchor || { x: .5, y: 1 };
       return { left: bounds.left + bounds.width * anchor.x, top: bounds.top + bounds.height * anchor.y };
     }
 
     updateNoteAlignment(pinData, containerWidth, containerHeight) {
       if (!this.noteWrapper) return;
+      this.fitNoteSize(containerWidth,containerHeight);
       const safeBottom = this.companionInput?.captureBottom ?? 80;
       const availableHeight = Math.max(80, containerHeight - safeBottom - 44);
       const imageHeight = this.capturePreview && !this.capturePreview.hidden ? Math.min(76, Math.max(0, availableHeight - 96)) : 0;
       this.noteWrapper.style.setProperty('--note-image-height', `${imageHeight}px`);
-      this.noteWrapper.style.setProperty('--note-text-height', `${Math.max(36, availableHeight - imageHeight - 36)}px`);
+      this.noteWrapper.style.setProperty('--note-text-height', `${this.noteContentHeight || Math.max(36, availableHeight - imageHeight - 36)}px`);
       const { left, top } = this.notePlacement(this.noteWrapper, containerWidth, containerHeight);
       this.noteWrapper.style.transformOrigin = 'center bottom';
 
@@ -1839,7 +1910,8 @@
 
       // Adjust wrapper height to fit preview
       // We can reuse adjustInputHeight logic but for preview
-      this.noteWrapper.style.maxHeight = `${Math.min(this.notePreview.scrollHeight, 250) + 40}px`;
+      this.noteSizeSignature=null;
+      this.alignNote();
     }
 
     /**
@@ -1960,6 +2032,7 @@
 
       // If in preview mode, do nothing (handled by switchToViewMode)
       if (this.noteInput.classList.contains('hidden')) return;
+      if(this.activePin){this.noteSizeSignature=null;this.alignNote();return;}
 
       // Reset height to calculate scrollHeight correctly
       this.noteInput.style.height = 'auto';
@@ -2137,7 +2210,7 @@
           this.videoElement.currentTime = pinData.timestamp;
         }
 
-        this.openNoteInput(pinData, true);
+        this.openNoteInput(pinData, false);
       });
     }
 
@@ -2511,7 +2584,7 @@
           this.videoElement.currentTime = pinData.timestamp;
         }
 
-        this.openNoteInput(pinData, true);
+        this.openNoteInput(pinData, !pinData.savedToStorage || !pinData.note);
       });
 
       return pinData;

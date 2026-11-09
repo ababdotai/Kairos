@@ -40,3 +40,37 @@ body>.main{padding:48px clamp(24px,5vw,80px);scroll-behavior:smooth}#libraryView
 #libraryView .timeline-zigzag .note-entry::before{display:none}#libraryView .timeline-zigzag .timestamp-dot{left:50%;top:-15px;width:6px;height:6px;transform:translateX(-50%);box-shadow:0 0 0 4px var(--bg),0 0 10px #9ac7dd40}
 #libraryView .timeline-zigzag .note-body{display:flex;flex-direction:column;gap:14px}#libraryView .timeline-zigzag .extras-grid{width:100%;max-width:none}#libraryView .timeline-zigzag .note-screenshot-container{width:100%;max-width:100%}#libraryView .timeline-zigzag .note-screenshot{width:100%;max-height:260px;object-fit:contain;object-position:left center}#libraryView .timeline-zigzag .note-body.user-note>.content{font-size:16px;font-weight:450}#libraryView .timeline-zigzag .note-header-row{gap:8px;flex-wrap:wrap}#libraryView .timeline-zigzag .note-versions{gap:10px!important}
 @media(max-width:600px){.workspace-tools{gap:6px}.workspace-tools .action-btn{font-size:11px;padding:8px 10px}[data-help]::after{max-width:180px;right:auto;left:0}.workspace-clear[data-help]::after{left:auto;right:0}#libraryView .timeline.timeline-zigzag{padding:20px 15px;gap:35px 18px}}
+/* Settings follow a four-stop route, with compact cards and viewport-level feedback. */
+#settingsView{max-width:1440px;margin:0 auto;padding-bottom:28px}
+#settingsView .settings-topbar{position:sticky;top:-48px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0;background:var(--bg);border-bottom:1px solid var(--border-color)}
+#settingsView .settings-topbar .note-title{font-size:30px;font-weight:550;letter-spacing:-.025em}#settingsView .settings-topbar p{margin:6px 0 0;font-size:12px;color:var(--text-dim)}
+#settingsView #saveSettingsBtn{position:static;width:auto;margin:0;white-space:nowrap;padding:10px 20px;font-size:12px;display:flex;align-items:center;gap:8px}
+.settings-path{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:30px 0 32px;position:relative;isolation:isolate;gap:10px}
+.settings-path::before{content:'';position:absolute;top:14px;left:14px;right:14px;height:1px;background:var(--border-color);z-index:-1}
+.settings-path a{display:flex;align-items:flex-start;flex-direction:column;gap:9px;color:var(--text-dim);text-decoration:none;width:fit-content;font-size:11px;border-radius:8px}
+.settings-path span{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--border-color);border-radius:50%;background:var(--bg);font-size:10px;font-variant-numeric:tabular-nums;transition:background .15s,color .15s}
+.settings-path b{font-weight:500}.settings-path a:hover,.settings-path a:focus-visible{color:var(--accent)}.settings-path a:hover span,.settings-path a:focus-visible span{background:var(--accent);color:var(--bg)}
+#settingsView .settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+#settingsView .settings-section{grid-column:auto!important;position:relative;min-width:0;padding:22px;scroll-margin-top:115px}
+#settingsView .settings-section::before{content:attr(data-step);display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid var(--border-color);border-radius:50%;font:11px system-ui;color:var(--accent);margin-right:9px;vertical-align:middle}
+#settingsView .settings-section h3{display:inline;vertical-align:middle;margin:0;font-size:16px;line-height:1.7}
+#settingsView .settings-section>p{margin:14px 0 18px;font-size:12px!important;line-height:1.7;color:var(--text-dim)}
+#settingsView #providerGroup{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#settingsView #providerGroup .provider-card{padding:12px 10px;gap:9px;border-radius:12px;min-width:0}
+#settingsView .provider-icon{width:28px;height:28px;flex-basis:28px;border-radius:8px;font-size:22px}#settingsView .provider-icon svg{width:22px;height:22px}
+#settingsView #providerGroup .radio-title{font-size:12px;padding-right:12px}#settingsView #providerGroup .radio-desc{font-size:10px;line-height:1.65;margin-top:5px}
+#settingsView #providerGroup input{top:9px;right:8px;width:12px;height:12px}#settingsView .radio-content{min-width:0}
+#settingsView #modelConfig .provider-intro{font-size:11px;line-height:1.75;margin:12px 0}
+#settingsView #uiLanguageGroup,#settingsView #languageConfig .radio-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#settingsView #uiLanguageGroup .radio-option,#settingsView #languageConfig .radio-option{padding:12px 9px;gap:7px;min-width:0;border-radius:12px}
+#settingsView #uiLanguageGroup .radio-title,#settingsView #languageConfig .radio-title{font-size:12px}#settingsView #uiLanguageGroup .radio-desc,#settingsView #languageConfig .radio-desc{font-size:10px;line-height:1.6;margin-top:5px}
+#settingsView .settings-section:focus{outline:1px solid var(--accent);outline-offset:4px}
+.settings-toast{position:fixed;z-index:10000;bottom:26px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;max-width:min(520px,calc(100vw - 36px));padding:13px 15px;border:1px solid var(--border-color);border-radius:17px;background:var(--sidebar-bg);color:var(--text);backdrop-filter:blur(24px);box-shadow:0 12px 44px #10223133;font:13px/1.6 system-ui;animation:toast-appear .2s ease-out}
+.settings-toast[hidden]{display:none}.toast-symbol{display:grid;place-items:center;width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#7aaea522;color:#7aaea5;font-size:17px}.settings-toast[data-type=error] .toast-symbol{background:#c8797020;color:#c87970}.toast-message{overflow-wrap:anywhere}
+.settings-toast button{border:0;background:transparent;color:var(--text-dim);font-size:20px;cursor:pointer;padding:0 6px;align-self:center;border-radius:7px}.settings-toast button:hover{background:var(--hover-bg)}
+@keyframes toast-appear{from{opacity:0;translate:0 7px}to{opacity:1;translate:0 0}}
+@media(min-width:1700px){body>.main:has(#settingsView:not([style*="display: none"])){padding-left:40px;padding-right:40px}#settingsView #providerGroup{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1100px){#settingsView .settings-grid{grid-template-columns:1fr}#settingsView #providerGroup{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){#settingsView .settings-topbar{top:-30px}#settingsView #providerGroup{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#settingsView .settings-topbar{top:0}#settingsView .settings-topbar .note-title{font-size:24px}#settingsView .settings-topbar p{font-size:10px}#settingsView #saveSettingsBtn{padding:9px 12px}#settingsView .settings-section{padding:18px;scroll-margin-top:100px}#settingsView #providerGroup{grid-template-columns:repeat(2,minmax(0,1fr))!important}#settingsView #uiLanguageGroup,#settingsView #languageConfig .radio-group{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-path{gap:6px}.settings-path a{font-size:10px}.settings-toast{bottom:16px;width:max-content}}
+@media(prefers-reduced-motion:reduce){.settings-toast{animation:none}}

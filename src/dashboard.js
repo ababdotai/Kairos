@@ -28,6 +28,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const apiKeyInput = document.getElementById('apiKeyInput');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const statusMessageEl = document.getElementById('statusMessage');
+    document.body.append(statusMessageEl);
+    let toastTimer;
+    const hideToast=()=>{clearTimeout(toastTimer);statusMessageEl.hidden=true;};
+    const scheduleToast=()=>{clearTimeout(toastTimer);if(statusMessageEl.dataset.type==='success'&&!statusMessageEl.matches(':hover')&&!statusMessageEl.contains(document.activeElement))toastTimer=setTimeout(hideToast,4500);};
+    statusMessageEl.querySelector('[data-dismiss-toast]').onclick=hideToast;
+    statusMessageEl.addEventListener('mouseenter',()=>clearTimeout(toastTimer));
+    statusMessageEl.addEventListener('mouseleave',scheduleToast);
+    statusMessageEl.addEventListener('focusin',()=>clearTimeout(toastTimer));
+    statusMessageEl.addEventListener('focusout',()=>setTimeout(scheduleToast,0));
+    document.querySelectorAll('.settings-path a').forEach(link=>link.addEventListener('click',event=>{
+        event.preventDefault();const section=document.querySelector(link.getAttribute('href'));section.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});section.focus({preventScroll:true});
+    }));
+
     const toggleKeyVisibilityBtn = document.getElementById('toggleKeyVisibility');
     const languageOptions = document.querySelectorAll('.radio-option[data-lang]');
     const highlightOptions = document.querySelectorAll('.radio-option[data-highlight]');
@@ -53,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateProviderUI(selectedProvider);
             const provider = providerConfig[selectedProvider];
             apiKeyInput.placeholder = t('Paste your {provider} API Key ({example})', { provider: provider.name, example: provider.keyPlaceholder });
-            statusMessageEl.textContent = '';
+            showStatus(t('Interface language saved.'), 'success');
         } catch {
             showStatus(t('Could not save interface language. Please try again.'), 'error');
         } finally {
@@ -273,7 +286,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Saves settings to chrome.storage.sync
      */
-    function saveSettings() {
+    async function saveSettings() {
+        if(saveSettingsBtn.disabled)return;
         const currentProvider = document.querySelector('input[name="provider"]:checked').value;
         const currentModel = document.getElementById('modelSelect').value;
         const currentKey = apiKeyInput.value.trim();
@@ -296,21 +310,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         for (const [id, key] of Object.entries(tempKeys)) updates[providerConfig[id].keyField] = key;
 
-        chrome.storage.sync.set(updates, () => {
-            if (chrome.runtime.lastError) {
-                showStatus(t('Could not save settings. Please try again.'), 'error');
-                return;
-            }
+        saveSettingsBtn.disabled=true;
+        try {
+            await chrome.storage.sync.set(updates);
             showStatus(t("Settings saved successfully!"), 'success');
-            setTimeout(() => {
-                statusMessageEl.textContent = '';
-            }, 3000);
-        });
+        } catch {
+            showStatus(t('Could not save settings. Please try again.'), 'error');
+        } finally { saveSettingsBtn.disabled=false; }
     }
 
     function showStatus(msg, type) {
-        statusMessageEl.textContent = msg;
-        statusMessageEl.className = 'status-message ' + type;
+        clearTimeout(toastTimer);
+        statusMessageEl.querySelector('.toast-message').textContent=msg;
+        statusMessageEl.querySelector('.toast-symbol').textContent=type==='success'?'✓':'!';
+        statusMessageEl.dataset.type=type;
+        statusMessageEl.hidden=false;
+        scheduleToast();
     }
 
     // --- Library Logic ---

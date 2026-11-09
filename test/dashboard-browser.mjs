@@ -53,13 +53,15 @@ try {
     window.notes=[{id:'one',videoId:'a',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:92,timeLabel:'01:32',content:'不要只看结果，还要看当时的信息与选择。',source:'user',imageUrl:canvas.toDataURL(),createdAt:1},{id:'two',videoId:'a',videoTitle:'学习如何做出更好的决定',videoUrl:'https://example.com/video',timestamp:119,timeLabel:'01:59',content:'先记录判断依据，再回头检查。',source:'user',createdAt:1},{id:'three',videoId:'b',videoTitle:'Second video',timestamp:0,timeLabel:'00:00',content:'Other video',createdAt:0}];
     window.chrome={storage:{sync:{get:async(keys,cb)=>{const result={uiLanguage:'zh',providerModels:{openai:'gpt-5.4-nano'}};if(cb)setTimeout(()=>cb(result),0);return result;},set:async()=>{}},local:{get:async k=>({[k]:cache[k]}),set:async v=>Object.assign(cache,v)}},runtime:{sendMessage:async(msg,cb)=>{requests.push(msg);if(cb){setTimeout(()=>cb({success:true,data:notes}),0);return;}if(failSummary)return {success:false,error:'Test provider unavailable'};return {success:true,data:{text:'## 我的观看收获\\n\\n- [01:32] 判断过程和结果同样重要。\\n- [01:59] 记录依据，留待复盘。',fingerprint:summaryFingerprint(notes.filter(n=>n.videoId===msg.payload.videoId))}};}}};
     Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}});`);
-  for (const file of ['src/provider-icons.js','src/ai-providers.js','src/content/i18n.js','src/content/markdown.js','src/content/refinement.js','src/note-summary.js','src/share-image.js','src/dashboard-summary.js','src/share-page.js','src/share-service.js','src/dashboard-share-page.js','src/dashboard.js']) {
+  for (const file of ['src/provider-icons.js','src/ai-providers.js','src/content/i18n.js','src/content/markdown.js','src/content/refinement.js','src/note-summary.js','src/share-image.js','src/dashboard-summary.js','src/share-page.js','src/share-service.js','src/dashboard-share-page.js','src/dashboard.js','src/settings-timeline.js']) {
     let code = await readFile(new URL('../'+file,import.meta.url),'utf8');
     code=code.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'');
     await run(code);
   }
   const dashboardCSS=await readFile(new URL('../src/dashboard-workspace.css',import.meta.url),'utf8');
   await run(`{const style=document.createElement('style');style.textContent=${JSON.stringify(dashboardCSS)};document.head.append(style)}`);
+  const settingsCSS=await readFile(new URL('../src/settings-timeline.css',import.meta.url),'utf8');
+  await run(`{const style=document.createElement('style');style.textContent=${JSON.stringify(settingsCSS)};document.head.append(style)}`);
   const studioCSS=await readFile(new URL('../src/dashboard-share-page.css',import.meta.url),'utf8');
   await run(`{const style=document.createElement('style');style.textContent=${JSON.stringify(studioCSS)};document.head.append(style)}`);
   const icon = 'data:image/png;base64,' + (await readFile(new URL('../public/icons/icon128.png', import.meta.url))).toString('base64');
@@ -148,6 +150,10 @@ try {
   await writeFile(join(profile,'dashboard-welcome-light.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await run('document.querySelector(".nav-item[data-tab=settings]").click()');
   assert.equal(await run('document.querySelectorAll(".provider-card").length'),6);
+  await run('new Promise(r=>setTimeout(r,100))');
+  assert.equal(await run('document.querySelectorAll(".settings-node").length'),4,'Settings cards have timeline nodes');
+  assert.ok(await run('document.querySelector(".settings-rail path").getAttribute("d")'),'Settings rail follows rendered cards');
+
   await run(`document.querySelector('input[value="openai"]').click()`);
   assert.equal(await run('document.querySelector("#modelSelect").value'),'gpt-6-luna','Settings migrates legacy nano consistently with API routing');
   assert.deepEqual(await run('[...document.querySelector("#modelSelect").options].map(o=>o.value)'),['gpt-6.1-terra','gpt-6-astra','gpt-6.1-sol','gpt-6-luna'],'Settings offers the current OpenAI family');
@@ -161,6 +167,16 @@ try {
   await run('document.querySelector("#saveSettingsBtn").click()');
   assert.equal(await run('savedSettings.anthropicApiKey'),'sk-ant-test');
   assert.equal(await run('savedSettings.providerModels.openai'),'gpt-6-astra');
+  assert.equal(await run('document.querySelector("#statusMessage").hidden'),false,'Save feedback is visible');
+  await run(`document.querySelector('#mainContent').scrollTop=10000;document.querySelector('#statusMessage').dispatchEvent(new Event('mouseenter'));new Promise(r=>setTimeout(r,4700))`);
+  assert.equal(await run('document.querySelector("#statusMessage").hidden'),false,'Hover preserves feedback');
+  assert.equal(await run('(()=>{const r=document.querySelector("#statusMessage").getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()'),true,'Toast remains in the viewport after scrolling');
+  assert.equal(await run('document.querySelector("#saveSettingsBtn").getBoundingClientRect().top>=0'),true,'Save action remains visible');
+  await run(`document.querySelector('[data-dismiss-toast]').click()`);
+  assert.equal(await run('document.querySelector("#statusMessage").hidden'),true,'Toast dismisses explicitly');
+  await run(`window.workingSet=chrome.storage.sync.set;chrome.storage.sync.set=async()=>{throw new Error('storage unavailable')};document.querySelector('#saveSettingsBtn').click();new Promise(r=>setTimeout(r,20))`);
+  assert.equal(await run('document.querySelector("#statusMessage").dataset.type'),'error','Storage failures show a toast');
+  await run(`chrome.storage.sync.set=workingSet;document.querySelector('#saveSettingsBtn').click();document.querySelector('#mainContent').scrollTop=0;new Promise(r=>setTimeout(r,250))`);
   await writeFile(join(profile,'providers-light.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]});
   await writeFile(join(profile,'providers-dark.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
