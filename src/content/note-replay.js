@@ -47,13 +47,14 @@ export class NoteReplaySeeker {
 
 export async function resumeNoteReplay() {
   let reply;
-  try { reply = await chrome.runtime.sendMessage({ type: 'GET_NOTE_REPLAY' }); } catch { return; }
+  try { reply = await (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'GET_NOTE_REPLAY' }); } catch { return; }
   if (!reply?.success || !reply.data?.videoId || !Number.isFinite(reply.data.timestamp)) return;
   const { Utils, VideoTracker, CONFIG, I18n } = window.Kairos;
   const tracker = new VideoTracker(CONFIG.VIDEO_SELECTOR);
-  let timer;
+  let timer, unsubscribe;
   const cleanup = () => {
     clearInterval(timer);
+    unsubscribe?.();
     document.removeEventListener('pointerdown', interrupt, true);
     document.removeEventListener('keydown', interrupt, true);
     window.removeEventListener('pagehide', cleanup);
@@ -63,7 +64,7 @@ export async function resumeNoteReplay() {
     getVideo: () => { tracker.findVideoElement(); return tracker.videoElement; },
     finish: () => {
       cleanup();
-      void chrome.runtime.sendMessage({ type: 'FINISH_NOTE_REPLAY' }).catch(() => {});
+      void (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'FINISH_NOTE_REPLAY' }).catch(() => {});
     },
     notify: message => {
       const toast = document.createElement('div');
@@ -79,5 +80,6 @@ export async function resumeNoteReplay() {
   document.addEventListener('keydown', interrupt, true);
   window.addEventListener('pagehide', cleanup, { once: true });
   timer = setInterval(() => replay.tick(), 200);
-  replay.tick();
+  unsubscribe = window.Kairos.Runtime?.onInvalidated(cleanup);
+  if (window.Kairos.Runtime?.valid() !== false) replay.tick();
 }

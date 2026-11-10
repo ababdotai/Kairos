@@ -78,7 +78,7 @@ try {
     window.saved = []; window.localSettings = {};
     window.chrome = { runtime: {getURL: p => p, sendMessage: (message, callback) => {
       if (message.type === 'SAVE_NOTE') saved.push(message.payload);
-      callback({success:true,data:[]});
+      callback({success:true,data:message.type==='SAVE_NOTE'?{status:'success',note:message.payload}:[]});
     }}, storage: {local: {get: async () => ({...localSettings}),set: async values => Object.assign(localSettings,values)}, sync: {get: async () => ({})}}};
   `);
   await run(`chrome.runtime.getURL = () => ${JSON.stringify(icon)}`);
@@ -189,6 +189,53 @@ try {
   await run(`o.openNoteInput(mdPin,false);new Promise(r=>setTimeout(r,600))`);
   assert.ok(Math.abs((await geometry()).width-resized.width)<2,'Only this note retains its temporary width');
   await writeFile(join(profile,'note-markdown-resize.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+
+  // Short text and screenshots must include the full action column inside the glass card.
+  for (const capture of [false,true]) {
+    await run(`o.openNoteInput({id:'bounds-'+${capture},timestamp:30,note:${capture?"''":"'旧金山'"}},true);
+      o.updateCapturePreview(${capture?"{region:{},imageUrl:chrome.runtime.getURL('icons/icon128.png')}":"{}"});
+      o.noteSizeSignature=null;o.alignNote();new Promise(r=>setTimeout(r,600))`);
+    assert.equal(await run(`(()=>{
+      const outer=o.noteWrapper.getBoundingClientRect();
+      return [o.noteInput,...o.noteWrapper.querySelectorAll('.kairos-note-action-btn'),...(o.capturePreview.hidden?[]:[o.capturePreview])].every(el=>{
+        const r=el.getBoundingClientRect();return r.top>=outer.top&&r.bottom<=outer.bottom+1&&r.left>=outer.left&&r.right<=outer.right+1;
+      });
+    })()`),true,'Input, screenshot and both actions remain inside the card');
+    await writeFile(join(profile,'note-contained-'+capture+'.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  }
+
+  await run(`video.style.width='960px';video.style.height='540px';o.updatePosition(video.getBoundingClientRect(),video);
+    window.testPin=o.createPin(10);testPin.imageUrl=chrome.runtime.getURL('icons/icon128.png');testPin.region={x:0,y:0,width:.5,height:.5};
+    o.openNoteInput(testPin,true);o.noteInput.value='Coursera 保存测试';
+    window.realSave=o.storage.saveNote;o.storage.saveNote=async()=>{throw Error('Quota exceeded')};
+    o.saveNote();`);
+  assert.equal(await run('o.noteInput.value'),'Coursera 保存测试','Failed save preserves text');
+  assert.equal(await run('o.noteSaveStatus.dataset.state'),'error');
+  assert.equal(await run('o.noteSaveStatus.parentElement===o.noteWrapper'),true,'Feedback lives with the draft');
+  assert.equal(await run('o.noteWrapper.querySelector(".save-btn").disabled'),false,'Save remains retryable');
+  await run(`window.releaseSave=null;o.storage.saveNote=record=>new Promise(resolve=>releaseSave=()=>resolve({status:'success',note:record}));
+    o.noteSaveStatus.querySelector('button').click();`);
+  assert.equal(await run('o.noteSaveStatus.dataset.state'),'saving','Retry has immediate progress feedback');
+  assert.equal(await run('o.noteWrapper.querySelector(".save-btn").disabled'),true);
+  await run('releaseSave();new Promise(r=>setTimeout(r,50))');
+  assert.equal(await run('testPin.savedToStorage'),true);
+
+  for (const enter of [true,false]) {
+    await run(`o.storage.saveNote=realSave;window.imagePin=o.createPin(20);imagePin.imageUrl=chrome.runtime.getURL('icons/icon128.png');imagePin.region={x:0,y:0,width:.5,height:.5};o.openNoteInput(imagePin,true);o.noteInput.value='';
+      ${enter ? "o.noteInput.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))" : "o.noteWrapper.querySelector('.save-btn').click()"};
+      new Promise(r=>setTimeout(r,80));`);
+    assert.equal(await run('imagePin.savedToStorage'),true,'Explicit confirmation saves screenshot without text');
+    assert.equal(await run('saved.at(-1).content'),'');
+    assert.ok(await run('saved.at(-1).imageUrl'));
+  }
+  await run(`window.viewPin=o.createPin(25);viewPin.imageUrl=chrome.runtime.getURL('icons/icon128.png');o.openNoteInput(viewPin,true);o.noteInput.value='Committed';
+    window.renderNotes=o.renderIslandNotes;o.renderIslandNotes=()=>{throw Error('Panel rendering failed')};
+    o.saveNote().then(()=>{o.renderIslandNotes=renderNotes});`);
+  assert.equal(await run('viewPin.savedToStorage'),true,'UI failure cannot turn a committed write into a save failure');
+  await run(`window.stalePin=o.createPin(30);o.openNoteInput(stalePin,true);o.noteInput.value='Keep draft';o.storage.saveNote=async()=>{throw Error('Extension context invalidated.')};o.saveNote();`);
+  assert.ok(await run('o.noteSaveStatus.textContent.includes("复制草稿")'),'Stale extension context offers recovery, not a useless retry');
+  await writeFile(join(profile,'note-save-recovery.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  console.log('PASS: save retry, busy feedback, screenshot confirmation, committed UI failure and disconnected recovery');
   console.log('PASS: note placement, drag persistence, natural playback, legacy capture coordinates, resize bounds and hover/fade');
   console.log('Preview: '+screenshotPath);
 } finally {

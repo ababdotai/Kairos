@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+const entries = [];
+const context = { window: {}, console: { debug: (...args) => entries.push(args) } };
+vm.runInNewContext(readFileSync('src/content/config.js', 'utf8'), context);
+context.window.Kairos.log('routine event');
+assert.equal(entries.length, 0, 'Production debug output is silent');
+context.window.Kairos.CONFIG.DEBUG = true;
+context.window.Kairos.log('diagnostic event');
+assert.deepEqual(entries, [['[Kairos]', 'diagnostic event']]);
+context.window.Kairos.CONFIG.DEBUG = false;
+context.window.Kairos.log('routine event');
+assert.equal(entries.length, 1, 'Debug logging can be disabled again');
+console.log('PASS: logging is silent by default and explicitly switchable');

@@ -535,9 +535,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 status.hidden = true;
                 try {
                     const result = await chrome.runtime.sendMessage({ type: 'OPEN_NOTE', payload: { id: note.id } });
-                    if (!result?.success) throw new Error(result?.error || 'No response');
-                } catch {
-                    status.textContent = label('Could not reopen this note. Check the saved source and try again.', '暂时无法打开此笔记，请检查原视频地址后重试。');
+                    if (!result?.success) throw Object.assign(new Error(result?.error || 'No response'), { code: result?.code });
+                } catch (error) {
+                    const messages = {
+                        REPLAY_LOCATION_INVALID: label('This note has no valid lesson address. Check its saved source.', '此笔记缺少有效的课节地址，请检查保存的原视频链接。'),
+                        REPLAY_NOTE_MISSING: label('This note no longer exists. Refresh your notes.', '此笔记已不存在，请刷新笔记列表。'),
+                        REPLAY_INVALID_SENDER: label('Refresh this dashboard after updating Kairos, then try again.', '请在更新 Kairos 后刷新此笔记管理页面，再次点击回看。')
+                    };
+                    status.textContent = messages[error.code] || label('Could not open playback. Refresh this dashboard and retry.', '未能打开回看页面，请刷新笔记管理页面后重试。');
+                    status.title = error.message;
                     status.hidden = false;
                 } finally { controls.forEach(control => control.disabled = false); }
             });

@@ -78,7 +78,7 @@ try {
     window.saved = []; window.localSettings = {};
     window.chrome = { runtime: {getURL: p => p, sendMessage: (message, callback) => {
       if (message.type === 'SAVE_NOTE') saved.push(message.payload);
-      callback({success:true,data:[]});
+      callback({success:true,data:message.type==='SAVE_NOTE'?{status:'success',note:message.payload}:[]});
     }}, storage: {local: {get: async () => ({...localSettings}),set: async values => Object.assign(localSettings,values)}, sync: {get: async () => ({})}}};
   `);
   await run(`chrome.runtime.getURL = () => ${JSON.stringify(icon)}`);
@@ -320,10 +320,10 @@ try {
   assert.equal(await run('saved.length'),beforeDraw,'Native rectangle capture does not save without text');
   const emptyDraftCount = await run('o.pins.length');
   await run('o.noteInput.value="   ";o.saveNote()');
-  assert.equal(await run('saved.length'),beforeDraw,'Saving a whitespace-only capture does not persist');
-  assert.equal(await run('o.pins.length'),emptyDraftCount-1,'Discard removes the temporary pin');
-  assert.equal(await run('o.activePin'),null,'Discard closes the capture editor');
-  assert.equal(await run('o.orbElement.dataset.feedback'),'discarded','Empty capture announces not saved');
+  assert.equal(await run('saved.length'),beforeDraw+1,'Explicit confirmation saves a screenshot without text');
+  assert.equal(await run('o.pins.length'),emptyDraftCount,'Confirmed screenshot retains its pin');
+  assert.equal(await run('o.activePin'),null,'Save closes the capture editor');
+  assert.equal(await run('o.orbElement.dataset.feedback'),'saved','Explicit screenshot confirmation announces saved');
   assert.deepEqual(await run('playerEvents'),[],'Earlier player pointer/mouse handlers never own the gesture');
   assert.equal(await run('video.volume'),0.8,'Drawing does not change volume');
   assert.equal(await run('scrollY'),0,'Wheel during drawing does not scroll page');

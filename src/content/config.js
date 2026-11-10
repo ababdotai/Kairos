@@ -16,7 +16,7 @@
     OVERLAY_ID: 'kairos-overlay-root',
     VIDEO_SELECTOR: 'video',
     Z_INDEX: 2000, // Below YouTube native UI (notifications: 2201+), above video player
-    DEBUG: true,
+    DEBUG: false,
     // Minimum dimensions to consider a "main" video
     MIN_WIDTH: 300,
     MIN_HEIGHT: 200,
@@ -41,7 +41,7 @@
    */
   function log(...args) {
     if (CONFIG.DEBUG) {
-      console.log('[Kairos]', ...args);
+      console.debug('[Kairos]', ...args);
     }
   }
 

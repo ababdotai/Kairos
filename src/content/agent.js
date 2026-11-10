@@ -124,9 +124,6 @@
         log(`ProactiveAgent: Subtitle state - Available: ${isAvailable}, Active: ${isActive}`);
         log(`ProactiveAgent: Current context length: ${context.length} chars`);
 
-        if (context.length > 0) {
-          log(`ProactiveAgent: Context preview: "${context.substring(0, 200)}..."`);
-        }
       }
 
       // If in smart mode, trigger immediate scan (bypass cooldown)
@@ -218,19 +215,19 @@
 
       try {
         const response = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({
+          (window.Kairos.Runtime || chrome.runtime).sendMessage({
             type: 'ANALYZE_SUBTITLES',
             payload: { context, videoTitle }
           }, resolve);
         });
 
-        log('Smart Analysis: Received response:', response);
+        log('Smart Analysis: Response received');
 
         if (response && response.success && response.data) {
           const { isKeyMoment, label, emoji, reason } = response.data;
 
           if (isKeyMoment) {
-             log(`ProactiveAgent: Smart Insight Found! [${label}] - ${reason}`);
+             log('ProactiveAgent: Smart insight found');
 
              // Construct a rule-like object dynamically
              const rule = {

@@ -8,7 +8,7 @@
   function request(type, payload) {
     return new Promise((resolve, reject) => {
       try {
-        chrome.runtime.sendMessage({ type, payload }, response => {
+        (window.Kairos.Runtime || chrome.runtime).sendMessage({ type, payload }, response => {
           if (chrome.runtime.lastError || !response?.success) reject(new Error(chrome.runtime.lastError?.message || response?.error || 'No response'));
           else resolve(response.data);
         });
@@ -75,7 +75,7 @@
         enabled = result.enabled; refreshButtons();
       } catch (error) {
         setHint(button, error.message === 'AI_NOT_CONFIGURED' ? t('Configure an AI provider first') : t('Could not save settings. Please try again.'));
-        if (error.message === 'AI_NOT_CONFIGURED') chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' });
+        if (error.message === 'AI_NOT_CONFIGURED') (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'OPEN_SETTINGS' });
       } finally { button.disabled = false; }
     });
     return button;

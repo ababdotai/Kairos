@@ -117,7 +117,7 @@ async function refineNote(note, settings) {
       return { ...current, ...(text ? { content: text, aiContent: text } : {}), updatedAt: Math.max(Date.now(), current.updatedAt + 1), refinement: { ...current.refinement, ...metadata } };
     });
     if (changed) await publishNote(updated);
-  } catch (error) { console.error('Could not persist refined note:', error); }
+  } catch (error) { console.error('[Kairos] Could not persist refined note:', error); }
 }
 
 async function setAutoRefine(enabled) {
@@ -153,7 +153,7 @@ async function cancelPendingRefinements() {
 chrome.storage?.onChanged?.addListener((changes, area) => {
   if (area !== 'sync' || !changes.autoRefineNotes) return;
   refinementEnabledOverride = changes.autoRefineNotes.newValue === true;
-  if (!refinementEnabledOverride) void cancelPendingRefinements().catch(console.error);
+  if (!refinementEnabledOverride) void cancelPendingRefinements().catch(error => console.error('[Kairos] Could not cancel pending refinements:', error));
 });
 
 // A browser/worker restart must not leave an eternal activity indicator.
@@ -221,7 +221,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (aiRequestTypes.has(message.type)) resolveAI(await chrome.storage.sync.get(AI_SETTINGS_KEYS));
       switch (message.type) {
         case 'OPEN_NOTE':
-          if (sender.tab) throw new Error('Open notes from the dashboard');
+          // Dashboard pages may themselves live in a tab. Validate the extension
+          // document URL instead of treating every tab sender as a content script.
+          if (sender.id !== chrome.runtime.id ||
+              sender.url?.split(/[?#]/)[0] !== chrome.runtime.getURL('src/dashboard.html')) {
+            throw Object.assign(new Error('Open notes from the dashboard'), { code: 'REPLAY_INVALID_SENDER' });
+          }
           response = await noteReplay.open(message.payload.id);
           break;
         case 'GET_NOTE_REPLAY':
@@ -293,9 +298,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true, data: response });
     } catch (error) {
       // Missing configuration is actionable UI state, not an extension crash.
-      if (!isAIConfigurationError(error)) console.error('Background Error:', error);
+      if (!isAIConfigurationError(error)) console.error('[Kairos] Background request failed:', message.type, error);
       sendResponse({
         success: false, error: error.message,
+        ...(message.type === 'OPEN_NOTE' ? { code: error.code || 'REPLAY_OPEN_FAILED' } : {}),
         ...(isAIConfigurationError(error) ? { code: error.code, providerName: error.providerName } : {})
       });
     }
@@ -383,7 +389,7 @@ JSON ONLY. No markdown.`;
     return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));
   } catch (e) {
     if (isAIConfigurationError(e)) throw e;
-    console.error('Smart Highlight Error:', e);
+    console.warn('[Kairos] Smart highlight unavailable:', e);
     return { isKeyMoment: false };
   }
 }
@@ -467,7 +473,7 @@ async function callGeminiForHUD(payload) {
     return Array.isArray(result) ? result : [];
   } catch (e) {
     if (isAIConfigurationError(e)) throw e;
-    console.error('HUD Script Generation Error:', e);
+    console.warn('[Kairos] HUD generation unavailable:', e);
     return [];
   }
 }

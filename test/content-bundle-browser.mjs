@@ -60,12 +60,21 @@ try {
   const tree=await call('Page.getFrameTree');
   const world=await call('Page.createIsolatedWorld',{frameId:tree.frameTree.frame.id,worldName:'kairos-smoke'});
   const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,contextId:world.executionContextId,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
-  await evaluate(`window.errors=[];window.addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));window.chrome={runtime:{getURL:()=> 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',onMessage:{addListener(){}},sendMessage:async(message,callback)=>{const response={success:true,data:[]};callback?.(response);return response;}},storage:{onChanged:{addListener(){}},local:{get:async(key,cb)=>{cb?.({});return {};},set:async()=>{}},sync:{get:async(key,cb)=>{cb?.({});return {};},set:async()=>{}}},i18n:{getUILanguage:()=> 'en'}}`);
+  await evaluate(`window.errors=[];window.addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));window.chrome={runtime:{id:'test-extension',getURL:()=> 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',onMessage:{addListener(){}},sendMessage:async(message,callback)=>{const response={success:true,data:[]};callback?.(response);return response;}},storage:{onChanged:{addListener(){}},local:{get:async(key,cb)=>{cb?.({});return {};},set:async()=>{}},sync:{get:async(key,cb)=>{cb?.({});return {};},set:async()=>{}}},i18n:{getUILanguage:()=> 'en'}}`);
   await evaluate(bundle);
   await new Promise(r=>setTimeout(r,500));
   assert.equal(await evaluate('!!window.Kairos.overlayManagerInstance'),true,'Built script initializes in an isolated world on a YouTube URL');
   assert.deepEqual(await evaluate('errors'),[]);
   assert.equal(await run('typeof window.Kairos'),'undefined','Page world remains isolated');
   assert.ok(await evaluate('!!document.querySelector("#kairos-overlay-root")'),'Overlay mounts');
+
+  await evaluate("window.addEventListener('error',e=>errors.push(e.message));delete chrome.runtime.id;");
+  await new Promise(r=>setTimeout(r,1300));
+  assert.equal(await evaluate('!!document.querySelector("#kairos-overlay-root")'),false,'Invalidated overlay is removed');
+  assert.equal(await evaluate('Kairos.Runtime.valid()'),false);
+  assert.ok(await evaluate('document.body.textContent.includes("Refresh this video page")'),'Refresh guidance appears');
+  await evaluate('Kairos.overlayManagerInstance.sidePanel.injectPanel()');
+  assert.equal(await evaluate('!!document.querySelector("#kairos-overlay-root")'),false);
+  assert.deepEqual(await evaluate('errors'),[],'No uncaught errors when the extension is reloaded');
   console.log('PASS: built manifest, classic script, no dynamic imports, YouTube-origin isolated-world initialization (mock extension APIs)');
 } finally { socket?.close();chrome.kill(); }

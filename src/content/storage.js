@@ -31,11 +31,16 @@
      */
     async saveNote(note) {
       return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({ type: 'SAVE_NOTE', payload: note }, (response) => {
-          if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
-          if (response && response.success) resolve(response.data);
-          else reject(response ? response.error : 'Unknown error');
-        });
+        const timer = setTimeout(() => reject(new Error('SAVE_TIMEOUT')), 12000);
+        const fail = error => { clearTimeout(timer); reject(new Error(error?.message || String(error))); };
+        try {
+          (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'SAVE_NOTE', payload: note }, response => {
+            clearTimeout(timer);
+            if (chrome.runtime.lastError) return fail(chrome.runtime.lastError);
+            if (response?.success && response.data?.status === 'success') resolve(response.data);
+            else fail(response?.error || 'No response from extension');
+          });
+        } catch (error) { fail(error); }
       });
     }
 
@@ -46,7 +51,7 @@
      */
     async getNotesForVideo(videoId) {
       return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({ type: 'GET_NOTES', payload: { videoId } }, (response) => {
+        (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'GET_NOTES', payload: { videoId } }, (response) => {
           if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
           if (response && response.success) resolve(response.data);
           else reject(response ? response.error : 'Unknown error');
@@ -63,7 +68,7 @@
       if (typeof id !== 'string' && typeof id !== 'number') throw new Error('Invalid note ID');
       return new Promise((resolve, reject) => {
         try {
-          chrome.runtime.sendMessage({ type: 'DELETE_NOTE', payload: { id } }, (response) => {
+          (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'DELETE_NOTE', payload: { id } }, (response) => {
             if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
             if (response && response.success) resolve(response.data);
             else reject(new Error(response?.error || 'No response from extension'));

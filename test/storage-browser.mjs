@@ -85,9 +85,29 @@ try {
     await run(`store.deleteNote(${JSON.stringify(id)})`);
     assert.equal((await run('store.getNotesForVideo("test")')).length,0,'Committed deletion persists on read');
   }
+  const courseRecord={id:'coursera-save',videoId:'coursera-life-on-other-planets-atEoD',videoUrl:'https://www.coursera.org/learn/life-on-other-planets/lecture/atEoD/introduction',content:'旧金山',timestamp:50,imageUrl:'data:image/png;base64,AA=='};
+  await run(`store.saveNote(${JSON.stringify(courseRecord)})`);
+  assert.equal((await run('store.getNotesForVideo("coursera-life-on-other-planets-atEoD")'))[0].content,'旧金山','Exact Coursera lesson saves and reloads');
+  await run(`chrome.runtime.id='test-extension';chrome.runtime.getURL=path=>'chrome-extension://test-extension/'+path;
+    window.replaySession={};window.replayNavigations=[];
+    chrome.storage ||= {};chrome.storage.session={set:async data=>Object.assign(replaySession,data),get:async()=>replaySession,remove:async key=>delete replaySession[key]};
+    chrome.tabs={create:async()=>({id:80}),update:async(id,options)=>replayNavigations.push(options.url),remove:async()=>{}};
+    window.openReplay=sender=>new Promise(resolve=>handler({type:'OPEN_NOTE',payload:{id:'coursera-save'}},sender,resolve));`);
+  for (const tab of [undefined,{id:42}]) {
+    const response=await run(`openReplay(${JSON.stringify({id:'test-extension',url:'chrome-extension://test-extension/src/dashboard.html?tab=notes',...(tab?{tab}:{})})})`);
+    assert.equal(response.success,true,'Dashboard replay works with or without sender.tab');
+  }
+  assert.equal(await run('replayNavigations.at(-1)'),courseRecord.videoUrl,'Correct Coursera lesson opens');
+  assert.equal(await run('replaySession["kairosReplay:80"].timestamp'),50,'Replay carries the saved second');
+  for (const url of [courseRecord.videoUrl,'chrome-extension://other/src/dashboard.html','chrome-extension://test-extension/src/popup.html']) {
+    const response=await run(`openReplay(${JSON.stringify({id:'test-extension',url,tab:{id:42}})})`);
+    assert.equal(response.success,false,'Non-dashboard sender is rejected');
+    assert.equal(response.code,'REPLAY_INVALID_SENDER');
+  }
   await run(await readFile(new URL('../src/content/i18n.js',import.meta.url),'utf8'));
   await run(await readFile(new URL('../src/content/delete_button.js',import.meta.url),'utf8'));
   await run('chrome.runtime.sendMessage=()=>{throw Error("Extension context invalidated.")}');
+  assert.match(await run('store.saveNote({id:"disconnected",content:"keep"}).catch(e=>e.message)'),/context invalidated/,'Synchronous disconnected saves reject instead of hanging');
   const error=await run('store.deleteNote("test").catch(e=>Kairos.deletionError(e))');
   assert.equal(error,await run('Kairos.I18n.t("Extension updated or disconnected. Refresh this video page and try again.")'),'Invalidated context gives recovery instructions');
   console.log('PASS: real IndexedDB save/delete/read through background message handler and stale-context recovery message');

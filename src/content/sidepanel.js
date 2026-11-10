@@ -59,7 +59,16 @@
       this.notes = [];
       this.isExpanded = true;
       this.retryCount = 0;
-      this.maxRetries = 50; // Increased for slow page loads and YouTube SPA
+      this.maxRetries = 3;
+      this.retryTimer = null;
+      this.drawerOpen = false;
+      this.onDrawerKey = event => {
+        if (event.key === 'Escape' && this.drawerOpen) {
+          event.preventDefault(); event.stopImmediatePropagation();
+          this.setDrawerOpen(false);
+        }
+      };
+      document.addEventListener('keydown', this.onDrawerKey, true);
       this.observer = null;
       this.checkInterval = null;
       this.lastInjectionTime = 0;
@@ -157,7 +166,11 @@
         return null;
       }
 
-      if (/^(coursera|udemy|ted)-/.test(Utils.getVideoId() || '')) {
+      if ((Utils.getVideoId() || '').startsWith('coursera-')) {
+        return { drawer: true };
+      }
+
+      if (/^(udemy|ted)-/.test(Utils.getVideoId() || '')) {
         const main = document.querySelector('main, [role="main"]');
         if (main) return { insertAfter: main };
       }
@@ -169,7 +182,11 @@
      * Injects the panel into the page using pure DOM API
      */
     injectPanel() {
+      if (this.destroyed || window.Kairos.Runtime?.valid() === false) return;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
       if (window.Kairos.Availability?.disabled() || !Utils.getVideoId()) {
+        if (this.drawerOpen) this.setDrawerOpen(false);
         this.container?.remove();
         this.lastInjectionTime = 0;
         this.container = null;
@@ -192,12 +209,8 @@
       if (!target) {
         if (this.retryCount < this.maxRetries) {
           this.retryCount++;
-          // Exponential backoff: 200ms, 400ms, 600ms... up to 3s
-          const delay = Math.min(200 * this.retryCount, 3000);
-          log(`SidePanel: Target not found, retry ${this.retryCount}/${this.maxRetries} in ${delay}ms`);
-          setTimeout(() => this.injectPanel(), delay);
-        } else {
-          log('SidePanel: Max retries reached, giving up');
+          const delay = 1000 * this.retryCount;
+          this.retryTimer = setTimeout(() => this.injectPanel(), delay);
         }
         return;
       }
@@ -207,8 +220,16 @@
       this.container = this.buildPanel();
       this.container.hidden = !!document.fullscreenElement;
 
-      // Handle different injection strategies
-      if (target.insertAfter) {
+      // Detached from Coursera's flex/grid layout: never resize its player.
+      if (target.drawer) {
+        this.container.classList.add('kairos-sp-drawer');
+        this.container.setAttribute('role', 'region');
+        this.container.setAttribute('aria-label', t('Notes panel'));
+        document.body.appendChild(this.container);
+        this.elements.toggle.textContent = '×';
+        this.elements.toggle.setAttribute('aria-label', t('Close notes panel'));
+        this.setDrawerOpen(false);
+      } else if (target.insertAfter) {
         // Insert after a specific element (Bilibili: after UP panel)
         target.insertAfter.parentElement.insertBefore(
           this.container,
@@ -257,7 +278,7 @@
       // Brand
       const brand = createElement('div', { className: 'kairos-sp-brand' });
       const logo = createElement('img', { className: 'kairos-sp-logo' });
-      logo.src = chrome.runtime.getURL('icons/icon.png');
+      logo.src = (window.Kairos.Runtime || chrome.runtime).getURL('icons/icon.png');
       logo.alt = t("Kairos: AI Video Notepad");
       brand.appendChild(logo);
 
@@ -379,14 +400,14 @@
             { icon: 'icons/icon.png', key: t('Click Enable'), text: t('to activate kairos') },
             { icon: 'icons/keyboard_key_k.png', key: t('Start Typing'), text: t('to take a note · Esc to exit') },
             { icon: 'icons/mouse-double-click.png', key: t('Left-drag on Video'), text: t('to capture a region') },
-            { icon: 'icons/ai_enhanced_input.png', key: t('Enter without Input'), text: t('to trigger AI note') },
+            { icon: 'icons/ai_enhanced_input.png', key: t('Turn on AI'), text: t('to refine your notes') },
         ];
 
         items.forEach(item => {
             const row = createElement('div', { className: 'kairos-sp-help-item' });
             
             const img = document.createElement('img');
-            img.src = chrome.runtime.getURL(item.icon);
+            img.src = (window.Kairos.Runtime || chrome.runtime).getURL(item.icon);
             img.className = 'kairos-sp-help-img';
             img.alt = '';
             
@@ -1018,6 +1039,20 @@
           animation: kairos-sp-note-appear 0.3s ease-out;
         }
 
+        #kairos-sidepanel.kairos-sp-drawer {
+          position:fixed; top:16px; right:16px; bottom:auto; max-height:calc(100dvh - 32px);
+          width:min(360px, calc(100vw - 32px)); max-width:none; margin:0;
+          z-index:2100; visibility:hidden; opacity:0; pointer-events:none;
+          transform:translateX(28px); transition:transform .2s ease,opacity .2s ease,visibility .2s;
+        }
+        #kairos-sidepanel.kairos-sp-drawer.is-open { visibility:visible;opacity:1;pointer-events:auto;transform:none; }
+        #kairos-sidepanel.kairos-sp-drawer .kairos-sp-card { height:auto;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden; }
+        #kairos-sidepanel.kairos-sp-drawer .kairos-sp-header { flex-wrap:wrap;flex-shrink:0; }
+        #kairos-sidepanel.kairos-sp-drawer .kairos-sp-header-actions { margin-left:auto; }
+        #kairos-sidepanel.kairos-sp-drawer .kairos-sp-body { flex:0 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain; }
+        #kairos-sidepanel.kairos-sp-drawer .kairos-sp-notes-list { max-height:none;overflow:visible; }
+        @media(prefers-reduced-motion:reduce) { #kairos-sidepanel.kairos-sp-drawer { transition:none; } }
+
         /* Shared glass and quiet playback indicators with the video island. */
         #kairos-sidepanel {
           --kairos-sp-text: #eef3fa;
@@ -1094,6 +1129,9 @@
     bindEvents() {
       // Toggle collapse
       this.elements.toggle?.addEventListener('click', () => {
+        if (this.container.classList.contains('kairos-sp-drawer')) {
+          this.setDrawerOpen(false); return;
+        }
         const card = this.container.querySelector('.kairos-sp-card');
         card.classList.toggle('collapsed');
         this.isExpanded = !card.classList.contains('collapsed');
@@ -1106,16 +1144,17 @@
 
       // Dashboard button
       this.elements.dashboardBtn?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'OPEN_DASHBOARD' });
+        (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'OPEN_DASHBOARD' });
       });
 
       // Settings button
       this.elements.settingsBtn?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' });
+        (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'OPEN_SETTINGS' });
       });
 
       // Periodically update subtitle badge
-      setInterval(() => this.updateSubtitleBadge(), 3000);
+      clearInterval(this.subtitleBadgeInterval);
+      this.subtitleBadgeInterval = setInterval(() => this.updateSubtitleBadge(), 3000);
     }
 
     /**
@@ -1175,7 +1214,7 @@
           if (this.elements.exportBtn) this.elements.exportBtn.disabled = true;
         }
       } catch (err) {
-        log('Failed to load notes:', err);
+        console.error('[Kairos] Failed to load notes:', err);
         this.renderEmptyState(t("Error loading notes"));
         if (this.elements.exportBtn) this.elements.exportBtn.disabled = true;
       }
@@ -1258,7 +1297,7 @@
               this.updateNoteCount();
             }, 200);
           } catch (err) {
-            log('Failed to delete note:', err);
+            console.error('[Kairos] Failed to delete note:', err);
             let errorText = item.querySelector('.kairos-delete-error');
             if (!errorText) {
               errorText = createElement('div', { className: 'kairos-delete-error' });
@@ -1293,9 +1332,25 @@
       this.loadNotes();
     }
 
+    setDrawerOpen(open) {
+      open = !!open && !document.fullscreenElement && !window.Kairos.Availability?.disabled();
+      if (open && !this.drawerOpen) this.drawerReturnFocus = document.activeElement;
+      const restoreFocus = !open && this.drawerOpen && this.container?.contains(document.activeElement);
+      this.drawerOpen = open;
+      if (this.container?.classList.contains('kairos-sp-drawer')) {
+        this.container.classList.toggle('is-open', open);
+        this.container.inert = !open;
+        this.container.setAttribute('aria-hidden', String(!open));
+      }
+      window.dispatchEvent(new CustomEvent('kairos-drawer-change', { detail: { open } }));
+      if (open) this.elements.toggle?.focus({ preventScroll: true });
+      else if (restoreFocus && this.drawerReturnFocus?.isConnected) this.drawerReturnFocus.focus({ preventScroll: true });
+    }
+
     /** Keeps the page list out of fullscreen and avoids scrolling the hidden page. */
     setFullscreen(fullscreen) {
       this.isFullscreen = fullscreen;
+      if (fullscreen && this.drawerOpen) this.setDrawerOpen(false);
       if (this.container) this.container.hidden = fullscreen;
     }
 
@@ -1429,7 +1484,7 @@
     setupUrlChangeListener() {
       let lastUrl = window.location.href;
 
-      setInterval(() => {
+      this.urlInterval = setInterval(() => {
         if (window.location.href !== lastUrl) {
           lastUrl = window.location.href;
           log('SidePanel: URL changed, reinitializing...');
@@ -1458,6 +1513,17 @@
 
         // Only check if our panel was removed - don't react to other DOM changes
         const panelExists = document.getElementById('kairos-sidepanel');
+
+        // Recover from slow lesson loading only when an actual mount point exists.
+        // Missing targets do not restart the bounded retry sequence.
+        if (!panelExists && !this.container && this.getInjectionPoint()) {
+          pendingReinject = true;
+          setTimeout(() => {
+            pendingReinject = false;
+            this.injectPanel();
+          }, 500);
+          return;
+        }
 
         if (!panelExists && this.container) {
           pendingReinject = true;
@@ -1560,7 +1626,7 @@
       const rapidCheckInterval = isBilibili ? 1000 : 500;  // Slower for Bilibili
       const rapidCheckDuration = isBilibili ? 5000 : 10000;  // Shorter for Bilibili
 
-      const rapidCheck = setInterval(() => {
+      const rapidCheck = this.rapidCheck = setInterval(() => {
         doCheck();
       }, rapidCheckInterval);
 
@@ -1579,6 +1645,13 @@
      * Destroys the side panel
      */
     destroy() {
+      this.destroyed = true;
+      this.setDrawerOpen(false);
+      document.removeEventListener('keydown', this.onDrawerKey, true);
+      clearTimeout(this.retryTimer);
+      clearInterval(this.urlInterval);
+      clearInterval(this.subtitleBadgeInterval);
+      clearInterval(this.rapidCheck);
       if (this.observer) {
         this.observer.disconnect();
         this.observer = null;

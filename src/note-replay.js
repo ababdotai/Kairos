@@ -6,8 +6,10 @@ export function createNoteReplay(api, getNote) {
   return {
     async open(id) {
       const note = await getNote(id);
-      if (!note) throw new Error('Note no longer exists');
-      const destination = replayDestination(note);
+      if (!note) throw Object.assign(new Error('Note no longer exists'), { code: 'REPLAY_NOTE_MISSING' });
+      let destination;
+      try { destination = replayDestination(note); }
+      catch { throw Object.assign(new Error('This note has no valid playback location'), { code: 'REPLAY_LOCATION_INVALID' }); }
       const tab = await api.tabs.create({ url: 'about:blank', active: true });
       try {
         await api.storage.session.set({ [key(tab.id)]: { ...destination, expires: Date.now() + 600000 } });

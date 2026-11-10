@@ -14,6 +14,8 @@
     write: 'M5 2.5h10l4.5 4.5v14H5z M14.5 3v5h5 M9 14h6m-3-3v6',
     expand: 'm6 6 6 5 6-5m-12 7 6 5 6-5',
     collapse: 'm6 11 6-5 6 5m-12 7 6-5 6 5',
+    dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
+    settings: 'M9 3h6l.5 3 2 1 3-.5 2 5-2.5 2 .5 3-4 3-2.5-1.5L12 21l-2.5-2-3 .5-3-4L5 13l-2-2 2-5 3 .5 1-1z M15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0',
     library: 'M4 5h4v14H4z M10 5h3v14h-3z M15 6l3-1 4 13-3 1z',
     sparkle: 'M10 3c0 5-2 7-7 8 5 1 7 3 7 8 1-5 3-7 8-8-5-1-7-3-8-8z M19 2v5m-2.5-2.5h5'
   };
@@ -135,6 +137,7 @@
       const fullscreen = !!document.fullscreenElement;
       this.overlayElement.classList.toggle('is-fullscreen', fullscreen);
       this.sidePanel?.setFullscreen(fullscreen);
+      if (this.drawerButton) this.drawerButton.hidden = fullscreen;
       this.renderIslandNotes();
       this.positionIsland();
     }
@@ -204,6 +207,7 @@
         if (this.islandContainer.hasPointerCapture(id)) this.islandContainer.releasePointerCapture(id);
         const preferences = { islandAnchor: this.islandAnchor };
         if (this.islandSize) preferences.islandSize = this.islandSize;
+        if (window.Kairos.Runtime?.valid() === false) return;
         chrome.storage.local.set(preferences).catch(error => log('Island position save failed', error));
       };
       for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) this.islandContainer.addEventListener(type, finish, options);
@@ -340,7 +344,7 @@
       orb.setAttribute('role', 'group');
       orb.setAttribute('aria-label', t("Kairos controls"));
 
-      const iconUrl = chrome.runtime.getURL('icons/icon.png');
+      const iconUrl = (window.Kairos.Runtime || chrome.runtime).getURL('icons/icon.png');
       const iconImg = document.createElement('img');
       iconImg.src = iconUrl;
       iconImg.className = 'kairos-orb-icon';
@@ -409,7 +413,7 @@
 
       const noteInput = document.createElement('textarea');
       noteInput.className = 'kairos-note-input';
-      noteInput.placeholder = t("Type note, or Enter for AI ✨");
+      noteInput.placeholder = t("Type a note · Enter to save");
       noteInput.rows = 1;
 
       const blockEvent = (e) => {
@@ -486,6 +490,25 @@
         this.islandPinButton.blur();
       });
       orbMenu.appendChild(this.islandPinButton);
+      if ((Utils.getVideoId() || '').startsWith('coursera-')) {
+        const drawerButton = document.createElement('button');
+        drawerButton.className = 'kairos-island-library';
+        this.drawerButton = drawerButton;
+        setIslandAction(drawerButton, 'library', t('Notes panel'));
+        drawerButton.setAttribute('aria-expanded', 'false');
+        drawerButton.addEventListener('click', event => {
+          event.stopPropagation();
+          if (document.fullscreenElement) return;
+          this.sidePanel?.setDrawerOpen(!this.sidePanel.drawerOpen);
+        });
+        this.onDrawerChange = ({ detail }) => {
+          island.classList.toggle('drawer-open', detail.open);
+          drawerButton.setAttribute('aria-expanded', String(detail.open));
+        };
+        window.addEventListener('kairos-drawer-change', this.onDrawerChange);
+
+      }
+
       if (window.Kairos.Availability) {
         const control = window.Kairos.Availability.createControl();
         const close = control.querySelector('.kairos-disable-trigger');
@@ -523,11 +546,20 @@
         });
       }
       islandPanel.appendChild(this.islandList);
-      const libraryButton = document.createElement('button');
-      libraryButton.className = 'kairos-island-library';
-      setIslandAction(libraryButton, 'library', t('Manage all notes'));
-      libraryButton.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'OPEN_DASHBOARD' }));
-      islandPanel.appendChild(libraryButton);
+      const footer = document.createElement('div');
+      footer.className = 'kairos-island-footer';
+      if (this.drawerButton) footer.appendChild(this.drawerButton);
+      for (const [icon, label, type] of [
+        ['dashboard', 'Manage all notes', 'OPEN_DASHBOARD'],
+        ['settings', 'Settings', 'OPEN_SETTINGS']
+      ]) {
+        const button = document.createElement('button');
+        button.className = 'kairos-island-library';
+        setIslandAction(button, icon, t(label));
+        button.addEventListener('click', () => (window.Kairos.Runtime || chrome.runtime).sendMessage({ type }));
+        footer.appendChild(button);
+      }
+      islandPanel.appendChild(footer);
       island.appendChild(islandPanel);
       this.hideIslandTip = window.Kairos.ActionTips.install(island);
       const resumeFollow = () => {
@@ -657,7 +689,7 @@
           try {
             await this.storage.deleteNote(pin.id);
           } catch (error) {
-            log('Note deletion failed', error);
+            console.error('[Kairos] Note deletion failed', error);
             this.showError(t("Delete failed"), window.Kairos.deletionError(error));
             return;
           }
@@ -666,7 +698,7 @@
             this.removePinByNoteId(pin.id);
             this.sidePanel?.refresh();
           } catch (error) {
-            log('Note deleted but view refresh failed', error);
+            console.error('[Kairos] Note deleted but view refresh failed', error);
             this.loadNotesForCurrentVideo();
           }
         }, t("Delete {time} note", { time: time.textContent }));
@@ -1459,19 +1491,27 @@
       if(key===this.noteSizeSignature)return;
       this.noteSizeSignature=key;
       const available=Math.max(60,height-(this.companionInput?.captureBottom??80)-44);
-      const imageHeight=image?Math.min(76,Math.max(0,available-96)):0;
+      const wrapperStyle=getComputedStyle(this.noteWrapper);
+      const verticalInsets=['paddingTop','paddingBottom','borderTopWidth','borderBottomWidth'].reduce((sum,key)=>sum+(parseFloat(wrapperStyle[key])||0),0);
+      const actionsHeight=this.noteWrapper.querySelector('.kairos-note-actions').offsetHeight;
+      const rowMinimum=Math.max(36,actionsHeight);
+      const imageHeight=image?Math.min(76,Math.max(0,available-verticalInsets-rowMinimum-8)):0;
+      this.noteWrapper.style.setProperty('--note-image-height',imageHeight+'px');
+      const imageStyle=image?getComputedStyle(this.capturePreview):null;
+      const imageSpace=image?this.capturePreview.offsetHeight+(parseFloat(imageStyle.marginTop)||0)+(parseFloat(imageStyle.marginBottom)||0):0;
+      const overhead=verticalInsets+imageSpace+(this.noteSaveStatus&&!this.noteSaveStatus.hidden?this.noteSaveStatus.offsetHeight+8:0);
       const longest=Math.max(0,...text.split('\n').map(line=>line.length));
       const maxWidth=Math.max(80,Math.min(width-24,760,Math.max(320,longest*7+80)));
       const minWidth=Math.min(240,maxWidth);
-      const minHeight=Math.min(70,available);
+      const minHeight=Math.min(overhead+rowMinimum,available);
       const element=this.isEditing?this.noteInput:this.notePreview;
       let chosen=Math.max(minWidth,Math.min(maxWidth,manual?.width||320+Math.sqrt(text.length)*9));
-      const measure=()=>{this.noteWrapper.style.width=chosen+'px';element.style.height='auto';return element.scrollHeight;};
+      const measure=()=>{this.noteWrapper.style.width=chosen+'px';element.style.height='auto';element.style.maxHeight='none';return element.scrollHeight;};
       let natural=measure();
       if(!manual){while(natural>Math.min(280,available*.65)&&chosen<maxWidth){chosen=Math.min(maxWidth,chosen+48);natural=measure();}}
-      const maxHeight=Math.max(minHeight,Math.min(available,natural+imageHeight+14));
+      const maxHeight=Math.max(minHeight,Math.min(available,Math.max(natural,actionsHeight)+overhead));
       const chosenHeight=manual?Math.max(minHeight,Math.min(maxHeight,manual.height)):maxHeight;
-      this.noteContentHeight=Math.max(28,chosenHeight-imageHeight-14);
+      this.noteContentHeight=Math.max(0,chosenHeight-overhead);
       this.noteWrapper.style.maxHeight=chosenHeight+'px';
       this.noteWrapper.style.height='auto';
       element.style.height=this.noteContentHeight+'px';
@@ -1574,7 +1614,7 @@
       this.noteDrag = null;
       this.noteWrapper.classList.remove('is-dragging');
       if (this.noteHandle.hasPointerCapture(drag.id)) this.noteHandle.releasePointerCapture(drag.id);
-      if (drag.moved) chrome.storage.local.set({ noteEditorAnchor: this.noteAnchor })
+      if (drag.moved && window.Kairos.Runtime?.valid() !== false) chrome.storage.local.set({ noteEditorAnchor: this.noteAnchor })
         .catch(error => log('Note position save failed', error));
     }
 
@@ -1608,7 +1648,7 @@
       const safeBottom = this.companionInput?.captureBottom ?? 80;
       const availableHeight = Math.max(80, containerHeight - safeBottom - 44);
       const imageHeight = this.capturePreview && !this.capturePreview.hidden ? Math.min(76, Math.max(0, availableHeight - 96)) : 0;
-      this.noteWrapper.style.setProperty('--note-image-height', `${imageHeight}px`);
+
       this.noteWrapper.style.setProperty('--note-text-height', `${this.noteContentHeight || Math.max(36, availableHeight - imageHeight - 36)}px`);
       const { left, top } = this.notePlacement(this.noteWrapper, containerWidth, containerHeight);
       this.noteWrapper.style.transformOrigin = 'center bottom';
@@ -1810,6 +1850,7 @@
       if (!silent) this.openNoteInput(pinData, true);
       const videoId = this.currentVideoId;
       const captureUrl = location.href;
+      pinData.capturePromise = (async () => {
       try {
         const screenshot = options.region
           ? await this.captureEngine.captureRegion(this.videoElement, options.region)
@@ -1831,6 +1872,9 @@
         log('Capture failed:', err);
         this.showError(t("Capture failed"), t("You can still type a note. Retry or check whether the video is protected."));
       }
+      })();
+      await pinData.capturePromise;
+      delete pinData.capturePromise;
     }
 
     /**
@@ -1846,7 +1890,7 @@
         const content = this.noteInput.value.trim();
         
         // If empty and Enter (without modifiers) -> Trigger AI
-        if (!content && this.activePin?.region && !e.shiftKey) {
+        if (!content && (this.activePin?.imageUrl || this.activePin?.capturePromise || this.activePin?.region) && !e.shiftKey) {
           e.preventDefault();
           this.saveNote();
         } else if (!content && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
@@ -1932,7 +1976,7 @@
       pinData.context = context;
 
       // Request AI Analysis
-      chrome.runtime.sendMessage({
+      (window.Kairos.Runtime || chrome.runtime).sendMessage({
         type: 'ANALYZE_FRAME',
         payload: {
           image: screenshot,
@@ -2008,12 +2052,12 @@
              if (response?.code === 'AI_NOT_CONFIGURED') {
                 errorTitle = t('Configure an AI provider first');
                 actionText = t('Configure');
-                actionCallback = () => { chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' }); };
+                actionCallback = () => { (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'OPEN_SETTINGS' }); };
              } else if (/api key/i.test(errorMsg) || errorMsg.includes('401') || errorMsg.includes('PERMISSION_DENIED')) {
                 errorTitle = t("Authentication Failed");
                 errorMsg = t("The selected provider’s API key is missing or invalid.");
                 actionText = t("Configure");
-                actionCallback = () => { chrome.runtime.sendMessage({ type: 'OPEN_SETTINGS' }); };
+                actionCallback = () => { (window.Kairos.Runtime || chrome.runtime).sendMessage({ type: 'OPEN_SETTINGS' }); };
              } else if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('quota')) {
                 errorTitle = t("Quota Exceeded");
                 errorMsg = t("Free tier limit reached. Please wait a moment.");
@@ -2057,6 +2101,7 @@
       if (!this.noteWrapper || !this.noteInput) return;
 
       this.activePin = pinData;
+      if (this.noteSaveStatus) this.setNoteSaveStatus();
       this.updateCapturePreview(pinData);
       this.noteInput.value = pinData.note || '';
       this.isEditing = isEdit;
@@ -2066,7 +2111,7 @@
         this.noteInput.classList.add('ai-loading');
         this.switchToEditMode(); // Show loading input
       } else {
-        this.noteInput.placeholder = t("Type note, or Enter for AI ✨");
+        this.noteInput.placeholder = t("Type a note · Enter to save");
         this.noteInput.classList.remove('ai-loading');
 
         if (!isEdit && pinData.note) {
@@ -2171,7 +2216,7 @@
         this.renderIslandNotes();
         log(`Loaded ${savedNotes.length} notes.`);
       } catch (err) {
-        log('Failed to load notes:', err);
+        console.error('[Kairos] Failed to load notes:', err);
       }
     }
 
@@ -2221,11 +2266,63 @@
     /**
      * Saves the current note and persists to Storage
      */
+    setNoteSaveStatus(state, message = '', action) {
+      if (!this.noteSaveStatus) {
+        this.noteSaveStatus = document.createElement('div');
+        this.noteSaveStatus.className = 'kairos-note-save-status';
+        this.noteSaveStatus.setAttribute('role', 'status');
+        this.noteSaveStatus.addEventListener('click', event => event.stopPropagation());
+        this.noteWrapper.prepend(this.noteSaveStatus);
+      }
+      this.noteSaveStatus.hidden = !state;
+      this.noteSaveStatus.dataset.state = state || '';
+      this.noteSaveStatus.replaceChildren();
+      const text = document.createElement('span'); text.textContent = message;
+      this.noteSaveStatus.append(text);
+      if (action) {
+        const button = document.createElement('button');
+        button.textContent = action.label;
+        button.onclick = action.run;
+        this.noteSaveStatus.append(button);
+      }
+      const save = this.noteWrapper.querySelector('.save-btn');
+      save.disabled = state === 'saving';
+      save.textContent = state === 'saving' ? '…' : '✓';
+      save.title = state === 'saving' ? t('Saving…') : t('Save (⌘↵)');
+      this.noteSizeSignature = null;
+      if (this.activePin) this.alignNote();
+    }
+
+    showNoteSaveFailure(error) {
+      const message = error?.message || String(error);
+      const disconnected = /context invalidated|receiving end does not exist|could not establish connection/i.test(message);
+      const detail = disconnected ? t('Extension reloaded. Copy your draft, then refresh this page.')
+        : message === 'SAVE_TIMEOUT' ? t('Saving timed out. Your draft is preserved; retry.')
+        : t('Could not save. Your draft is preserved; retry.');
+      this.setNoteSaveStatus('error', detail, disconnected ? {
+        label: t('Copy draft'), run: async () => {
+          try {
+            await navigator.clipboard.writeText(this.noteInput.value);
+            this.setNoteSaveStatus('error', t('Draft copied. Refresh this page and paste it into a new note.'));
+          } catch { this.noteInput.focus(); this.noteInput.select(); this.setNoteSaveStatus('error', t('Select and copy your draft before refreshing.')); }
+        }
+      } : { label: t('Retry save'), run: () => this.saveNote() });
+      this.noteSaveStatus.title = message;
+    }
+
     async saveNote() {
       const pin = this.activePin;
-      if (!pin) return;
+      if (!pin || pin.saving) return;
       const content = this.noteInput.value.trim();
-      if (this.activePin && !this.activePin.savedToStorage && !content) {
+      if (!content && !pin.imageUrl && pin.capturePromise) {
+        pin.saving = true;
+        this.setNoteSaveStatus('saving', t('Saving…'));
+        await pin.capturePromise;
+        pin.saving = false;
+        if (this.activePin !== pin) return;
+        this.setNoteSaveStatus();
+      }
+      if (this.activePin && !this.activePin.savedToStorage && !content && !pin.imageUrl) {
         this.cancelNote();
         return;
       }
@@ -2240,7 +2337,16 @@
       pin.note = content;
       pin.source = 'user';
       delete pin.deferredRefinement;
-      const saved = await this.savePinToStorage(pin);
+      pin.saving = true;
+      this.setNoteSaveStatus('saving', t('Saving…'));
+      this.noteInput.readOnly = true;
+      let saved;
+      try { saved = await this.savePinToStorage(pin); }
+      finally {
+        pin.saving = false;
+        this.noteInput.readOnly = false;
+        if (this.activePin === pin) this.noteWrapper.querySelector('.save-btn').disabled = false;
+      }
       if (!saved) { pin.note = previousContent; pin.source = previousSource; return; }
       if (this.activePin !== pin) return;
       // Successful saving finishes the note-taking pause, even if playback
@@ -2262,8 +2368,9 @@
 
     async savePinToStorage(pinData, notify = true) {
         if (!pinData) return;
-        if (!pinData.savedToStorage && !pinData.note?.trim()) return false;
+        if (!pinData.savedToStorage && !pinData.note?.trim() && !pinData.imageUrl) return false;
 
+        try {
         const info = Utils.getVideoInfo();
         const noteRecord = {
           id: pinData.id || Utils.generateId(),
@@ -2286,7 +2393,6 @@
           createdAt: pinData.createdAt || Date.now()
         };
 
-        try {
           const response = await this.storage.saveNote(noteRecord);
           Object.assign(noteRecord, response?.note || {});
           const lateImage = pinData.imageUrl && !noteRecord.imageUrl ? pinData.imageUrl : null;
@@ -2297,6 +2403,7 @@
             void window.Kairos.Refinement.request('GET_NOTE', { id: noteRecord.id }).then(note => this.applyNoteUpdate({ id: noteRecord.id, note })).catch(() => {});
           }
           if (this.currentVideoId && noteRecord.videoId !== this.currentVideoId) return true;
+          try {
           this.renderIslandNotes();
           
           // Force spatial marker refresh to update tooltip content
@@ -2311,11 +2418,14 @@
             this.sidePanel.addNote(noteRecord);
           }
           if (notify) this.showIslandFeedback('saved');
+          } catch (error) { console.error('[Kairos] Note saved; panel refresh failed:', error); }
+          if (this.activePin === pinData) this.setNoteSaveStatus();
           return true;
         } catch (err) {
-          log('Failed to persist note:', err);
+          console.error('[Kairos] Failed to persist note:', err);
           this.showIslandFeedback('error');
-          this.showError(t("Note not saved"), t("Storage failed. Your text is preserved; click Save to retry."));
+          if (this.activePin === pinData) this.showNoteSaveFailure(err);
+          else this.showError(t('Note not saved'), t('Your draft is still here. Open it and retry.'));
           return false;
         }
     }
@@ -2326,6 +2436,7 @@
      */
     closeNoteInput(force = false) {
       if (!this.noteWrapper || (!force && this.isEditing)) return;
+      this.setNoteSaveStatus();
       this.finishNoteDrag();
       if (this.activePin?.region && !this.activePin.savedToStorage &&
           !this.activePin.isAnalyzing && !this.noteInput.value.trim()) {
@@ -2797,6 +2908,8 @@
      * Destroys the overlay
      */
     destroy() {
+      this.stopLoading();
+      this.clearAllSpatialMarkers();
       this.hideIslandTip?.();
       this.videoPlaybackController?.abort();
       this.finishNoteDrag();
@@ -2819,6 +2932,7 @@
       if (this.container && this.container.parentNode) {
         this.container.parentNode.removeChild(this.container);
       }
+      window.removeEventListener('kairos-drawer-change', this.onDrawerChange);
       log('Overlay destroyed');
     }
   }

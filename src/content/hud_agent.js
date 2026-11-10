@@ -90,7 +90,7 @@
         const videoUrl = window.location.href;
 
         const response = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({
+          (window.Kairos.Runtime || chrome.runtime).sendMessage({
             type: 'GENERATE_HUD_SCRIPT',
             payload: { 
               videoUrl: videoUrl,

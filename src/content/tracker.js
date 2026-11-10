@@ -92,7 +92,7 @@
 
       if (bestVideo && bestVideo !== this.videoElement) {
         this.videoElement = bestVideo;
-        log('Video element found (Best Candidate):', bestVideo);
+        log('Video element found');
         return true;
       }
 

@@ -17,6 +17,20 @@
     })();
   }
   const zh = {
+  "Type a note · Enter to save": "输入笔记 · 按 Enter 保存",
+  "Turn on AI": "开启 AI 整理",
+  "to refine your notes": "结合上下文润色笔记",
+
+  "Saving…": "正在保存…",
+  "Retry save": "重试保存",
+  "Copy draft": "复制草稿",
+  "Extension reloaded. Copy your draft, then refresh this page.": "扩展连接已失效，请先复制草稿，再刷新页面。",
+  "Draft copied. Refresh this page and paste it into a new note.": "草稿已复制，请刷新页面后粘贴到新笔记。",
+  "Select and copy your draft before refreshing.": "请先选中并复制草稿，再刷新页面。",
+  "Saving timed out. Your draft is preserved; retry.": "保存超时，草稿仍保留，请重试。",
+  "Could not save. Your draft is preserved; retry.": "保存失败，草稿仍保留，请重试。",
+  "Your draft is still here. Open it and retry.": "草稿仍保留，请打开后重试。",
+
   "Configure your {provider} API key in Settings.": "请在设置中配置 {provider} 的 API 密钥。",
   "The selected provider’s API key is missing or invalid.": "当前提供商的 API 密钥缺失或无效。",
 
@@ -71,6 +85,8 @@
   "Could not save settings. Please try again.": "设置保存失败，请重试。",
 
   "Turn off Kairos": "关闭 Kairos",
+  "Notes panel": "笔记面板",
+  "Close notes panel": "关闭笔记面板",
   "Manage all notes": "管理全部笔记",
   "Enable": "启用",
   "Disable": "停用",

@@ -490,6 +490,12 @@
       
       .hidden { display: none !important; }
 
+      .kairos-note-save-status { flex: 0 0 100%; box-sizing: border-box; display: flex; gap: 8px; align-items: center; padding: 4px 8px 8px; font: 12px/1.5 system-ui; color: inherit; }
+      .kairos-note-save-status[hidden] { display: none; }
+      .kairos-note-save-status[data-state="error"] { color: #dd796c; }
+      .kairos-note-save-status span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .kairos-note-save-status button { flex-shrink: 0; cursor: pointer; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 8px; padding: 5px 8px; font: inherit; }
+      .kairos-note-action-btn:disabled { opacity: .5; cursor: wait; }
       /* Note Action Buttons (Save & Cancel) */
       .kairos-note-actions {
         display: flex;
@@ -1082,6 +1088,10 @@
       .kairos-island-container.docked.is-resizing,
       .kairos-island-container.docked.is-resizing .kairos-orb { transition: none !important; }
       .kairos-island-resize { display: none; position: absolute; z-index: 5; touch-action: none; }
+      .kairos-orb-btn[hidden], .kairos-island-library[hidden] { display:none!important; }
+      .kairos-island-container.docked.drawer-open { height:auto!important;min-height:0!important; }
+      .kairos-island-container.drawer-open > .kairos-island-panel,
+      .kairos-island-container.drawer-open > .kairos-island-resize { display:none!important; }
       .docked:is(:hover, :focus-within, .is-pinned, .dock-dragging, :has(.kairos-disable-options:popover-open)) > .kairos-island-resize { display: block; }
       .kairos-island-resize.edge-n, .kairos-island-resize.edge-s { height: 8px; left: 20px; right: 20px; cursor: ns-resize; }
       .kairos-island-resize.edge-n { top: -3px; }
@@ -1223,7 +1233,8 @@
       .kairos-island-delete { display: inline-flex; align-items: center; flex-shrink: 0; }
       .kairos-island-delete.is-confirming { white-space: nowrap; color: #ffb7b0; background: #b6373025; border-radius: 6px; font: 11px/1.4 system-ui; }
       .kairos-island-note:hover, .kairos-island-delete:hover { background: #ffffff12; border-radius: 6px; }
-      .kairos-island-library { background: transparent; color: #cee4f0; border: 0; padding: 10px 0 0; font: inherit; cursor: pointer; }
+      .kairos-island-footer { display:flex;justify-content:flex-end;gap:8px;padding-top:8px; }
+      .kairos-island-library { background: transparent; color: #cee4f0; border: 0; padding: 6px; border-radius:8px; font: inherit; cursor: pointer; }
       .kairos-island-empty { margin: 6px 0 10px; color: #becfda; font-size: 11px; }
       /* Keep the controls hittable while focus moves into the top-layer menu. */
       .kairos-island-container.docked:is(.is-pinned, :has(.kairos-disable-options:popover-open)) { width: var(--island-expanded-width, 340px); }
@@ -1412,7 +1423,10 @@
       .kairos-island-note-copy { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
       .kairos-island-note-copy p,.kairos-island-note-copy h1,.kairos-island-note-copy h2,.kairos-island-note-copy h3,.kairos-island-note-copy ul,.kairos-island-note-copy li { display:inline; font:inherit; padding:0; margin:0; }
       .kairos-island-note-copy p::after,.kairos-island-note-copy h3::after,.kairos-island-note-copy li::after { content:' '; }
-      .kairos-note-wrapper { box-sizing:border-box; }
+      .kairos-note-wrapper { box-sizing:border-box; display:grid; grid-template-columns:minmax(0,1fr) auto; }
+      .kairos-note-wrapper .kairos-note-input,.kairos-note-wrapper .kairos-note-preview { grid-column:1; grid-row:2; }
+      .kairos-note-wrapper .kairos-note-actions { grid-column:2; grid-row:2; }
+      .kairos-note-wrapper .kairos-capture-preview { grid-column:1 / -1; grid-row:1; box-sizing:border-box; height:var(--note-image-height,76px); }
       .kairos-note-wrapper .kairos-note-input,.kairos-note-wrapper .kairos-note-preview { box-sizing:border-box; min-width:0; overflow-wrap:anywhere; scrollbar-width:thin; scrollbar-color:#8ca2b577 transparent; }
       .kairos-note-preview { white-space:normal; }
       .kairos-note-preview p { margin:6px 0; }

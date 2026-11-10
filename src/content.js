@@ -1,3 +1,4 @@
+import './content/runtime.js';
 import { resumeNoteReplay } from './content/note-replay.js';
 import './content/i18n.js';
 import './content/action_tips.js';
@@ -35,6 +36,11 @@ import './content/sidepanel.js';
   /**
    * Main application initialization
    */
+  const runtime = window.Kairos.Runtime;
+  const safely = promise => promise.catch(error => {
+    if (runtime.isInvalid(error)) runtime.invalidate();
+    else console.error('Kairos initialization failed:', error);
+  });
   const availability = window.Kairos.Availability;
   async function bootstrap() {
     await window.Kairos.I18n.init();
@@ -42,9 +48,9 @@ import './content/sidepanel.js';
     await availability.init();
     let started = false;
     function startWhenEnabled() {
-      if (!started && !availability.disabled()) {
+      if (!started && runtime.valid() && !availability.disabled()) {
         started = true;
-        void init();
+        void safely(init());
       }
     }
     availability.subscribe(startWhenEnabled);
@@ -105,6 +111,7 @@ import './content/sidepanel.js';
     };
     videoTracker.start(onVideo);
     function applyAvailability() {
+      if (!runtime.valid()) return;
       if (availability.disabled()) {
         videoTracker.stop();
         overlayManager.updatePosition(null, null);
@@ -126,7 +133,7 @@ import './content/sidepanel.js';
 
     // Monitor URL changes (for SPA like YouTube)
     let lastUrl = window.location.href;
-    setInterval(() => {
+    const navigationTimer = setInterval(() => {
       if (window.location.href !== lastUrl) {
         lastUrl = window.location.href;
         availability.checkVisit();
@@ -138,6 +145,26 @@ import './content/sidepanel.js';
         if (hudAgent) hudAgent.lastAnalysisTime = 0; // Trigger scan soon
       }
     }, 2000);
+
+    runtime.onInvalidated(() => {
+      clearInterval(navigationTimer);
+      videoTracker.stop(); agent.stop(); hudAgent.stop(); subtitleManager.stop();
+      const draft = overlayManager.isEditing ? overlayManager.noteInput?.value : '';
+      sidePanelManager.destroy();
+      overlayManager.destroy();
+      const notice = document.createElement('div');
+      notice.setAttribute('role', 'status');
+      notice.textContent = window.Kairos.I18n.t('Extension updated or disconnected. Refresh this video page and try again.');
+      notice.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#203440ed;color:white;padding:12px 18px;border-radius:14px;font:14px/1.5 system-ui;max-width:85vw';
+      if (draft?.trim()) {
+        const field = document.createElement('textarea');
+        field.value = draft; field.readOnly = true;
+        field.style.cssText='display:block;width:100%;min-height:70px;margin-top:8px;color:inherit;background:transparent;border:1px solid #ffffff60';
+        notice.append(field);
+      }
+      document.body.append(notice);
+      if (!draft?.trim()) setTimeout(()=>notice.remove(),10000);
+    });
 
     // Initial load
     overlayManager.loadNotesForCurrentVideo();
@@ -158,9 +185,9 @@ import './content/sidepanel.js';
 
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootstrap);
+    document.addEventListener('DOMContentLoaded', () => safely(bootstrap()));
   } else {
-    bootstrap();
+    safely(bootstrap());
   }
 
 })();

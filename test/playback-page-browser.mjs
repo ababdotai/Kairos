@@ -78,7 +78,7 @@ try {
     window.saved = []; window.localSettings = {};
     window.chrome = { runtime: {getURL: p => p, sendMessage: (message, callback) => {
       if (message.type === 'SAVE_NOTE') saved.push(message.payload);
-      callback({success:true,data:[]});
+      callback({success:true,data:message.type==='SAVE_NOTE'?{status:'success',note:message.payload}:[]});
     }}, storage: {local: {get: async () => ({...localSettings}),set: async values => Object.assign(localSettings,values)}, sync: {get: async () => ({})}}};
   `);
   await run(`chrome.runtime.getURL = () => ${JSON.stringify(icon)}`);
@@ -163,11 +163,55 @@ try {
   for (const url of ['https://www.coursera.org/learn/ml/lecture/abc/intro','https://www.udemy.com/course/python/learn/lecture/123','https://www.ted.com/talks/a_talk']) {
     await run(`pageUrl=${JSON.stringify(url)};preview.remove();video.parentElement.className='lesson-player';tick();`);
     assert.equal(await run('tracker.videoElement===video'),true, url);
-    await run("document.body.appendChild(document.createElement('main'));side.lastInjectionTime=0;side.injectPanel()");
+    await run("document.body.appendChild(document.createElement('main'))");
+    if (url.includes('coursera.org')) {
+      await run(`window.lesson=document.createElement('div');lesson.dataset.testid='course-frame-content';
+        window.lessonBlock=document.createElement('div');lessonBlock.append(video.parentElement);
+        const title=document.createElement('div');title.dataset.testid='video-item-title-and-attribution';lessonBlock.append(title);
+        window.nextLesson=document.createElement('button');nextLesson.textContent='Next lesson';
+        lesson.append(lessonBlock,nextLesson);document.body.append(lesson);`);
+    }
+    await run("side.lastInjectionTime=0;side.injectPanel()");
+    if (url.includes('coursera.org')) {
+      assert.equal(await run('side.container.parentElement===document.body && lessonBlock.nextElementSibling===nextLesson'),true,'Drawer stays outside the course layout');
+      assert.equal(await run('getComputedStyle(side.container).position'),'fixed');
+      assert.equal(await run('side.container.inert'),true,'Drawer starts closed');
+      await run('window.drawerBody=side.container.querySelector(".kairos-sp-body");window.savedBody=drawerBody.innerHTML;drawerBody.replaceChildren();');
+      assert.equal(await run('side.container.getBoundingClientRect().height < innerHeight / 2'),true,'Short content does not stretch the drawer');
+      await run('window.filler=document.createElement("div");filler.style.height="2000px";drawerBody.append(filler)');
+      assert.equal(await run('side.container.getBoundingClientRect().height <= innerHeight - 30'),true,'Long content stays within viewport');
+      assert.equal(await run('drawerBody.scrollHeight > drawerBody.clientHeight'),true,'Long content scrolls inside drawer');
+      await run('drawerBody.innerHTML=savedBody');
+      await run('window.beforeDrawer=JSON.stringify(video.getBoundingClientRect());side.setDrawerOpen(true)');
+      assert.equal(await run('side.drawerOpen && !side.container.inert'),true);
+      assert.equal(await run('JSON.stringify(video.getBoundingClientRect())===beforeDrawer'),true,'Opening drawer never resizes video');
+      await run('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
+      assert.equal(await run('side.drawerOpen'),false,'Escape closes drawer');
+      await run('side.setDrawerOpen(true);side.elements.toggle.click()');
+      assert.equal(await run('side.drawerOpen'),false,'Close button dismisses drawer');
+      await run('side.setDrawerOpen(true);side.setFullscreen(true)');
+      assert.equal(await run('side.drawerOpen'),false,'Fullscreen closes drawer');
+      await run('side.setFullscreen(false)');
+      assert.equal(await run('side.container.inert'),true,'Leaving fullscreen does not reopen drawer');
+      assert.equal(await run('side.maxRetries'),3,'Missing target retries are capped at three');
+    }
     assert.equal(await run('!!document.querySelector("#kairos-sidepanel")'),true,'Lesson notes panel');
     await run("pageUrl=new URL(pageUrl).origin+'/';tick()");
     assert.equal(await run('tracker.videoElement'),null,'Homepage previews excluded');
   }
+  assert.deepEqual(await run(`(()=>{
+    pageUrl='https://www.coursera.org/learn/ml/lecture/abc/intro';
+    const manager=new Kairos.SidePanelManager();
+    manager.getInjectionPoint=()=>null;
+    const nativeTimeout=window.setTimeout;
+    const queue=[];let scheduled=0;
+    window.setTimeout=fn=>{queue.push(fn);scheduled++;return scheduled;};
+    try {
+      manager.injectPanel();
+      while(queue.length){manager.lastInjectionTime=0;queue.shift()();}
+      return {scheduled,retries:manager.retryCount};
+    } finally {window.setTimeout=nativeTimeout;}
+  })()`),{scheduled:3,retries:3},'Missing mount point schedules only three retries');
   await run('tracker.stop();o.destroy();window.fresh=new Kairos.OverlayManager();');
   await run('fresh.init()');
   assert.equal(await run('getComputedStyle(fresh.container).display'),'none','Initial island stays hidden before any valid video is found');
